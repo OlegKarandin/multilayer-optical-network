@@ -7,7 +7,7 @@ name = "multilayer-optical-mcp"
 version = "0.1.0"
 description = "MCP server for multi-layer optical network reasoning (GNPy QoT + IP-over-optical)."
 requires-python = ">=3.11"
-readme = "CLAUDE.md"
+readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 dependencies = [
@@ -39,7 +39,7 @@ where = ["src"]
 # every ModeRegistry loads, and the german_17 reference topology used by the
 # scenario builder, traffic generator, and e2e test. (Test-only oracles —
 # eqpt/, toy_2span.json — live under tests/fixtures/ instead; they never ship.)
-multilayer_optical_mcp = ["data/*.yaml", "data/*.json"]
+multilayer_optical_mcp = ["data/*.yaml", "data/*.json", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
