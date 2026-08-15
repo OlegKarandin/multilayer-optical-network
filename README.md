@@ -84,7 +84,7 @@ time. A handful of slow, real-GNPy ground-truth tests are skipped by default;
 opt in with:
 
 ```bash
-MOMCP_RUN_GNPY_E2E=1 pytest tests/
+OPTICAL_NET_RUN_GNPY_E2E=1 pytest tests/
 ```
 
 ## License

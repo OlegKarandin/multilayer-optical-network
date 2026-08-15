@@ -19,8 +19,8 @@ from multilayer_optical_mcp.model.topology_import import model_from_abstract_gra
 
 @pytest.fixture(scope="session")
 def german17_built():
-    if not os.environ.get("MOMCP_RUN_GNPY_E2E"):
-        pytest.skip("slow real-GNPy build; set MOMCP_RUN_GNPY_E2E=1 to run")
+    if not os.environ.get("OPTICAL_NET_RUN_GNPY_E2E"):
+        pytest.skip("slow real-GNPy build; set OPTICAL_NET_RUN_GNPY_E2E=1 to run")
 
     graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))
     modes = default_modes()

@@ -10,7 +10,7 @@ real german_17 build gives protected services whose legs are physically
 disjoint but not vetted against any *risk group* -- exactly the gap a
 flood-zone risk group exposes.
 
-Opt-in real-adapter test: gated behind MOMCP_RUN_GNPY_E2E=1 via the shared
+Opt-in real-adapter test: gated behind OPTICAL_NET_RUN_GNPY_E2E=1 via the shared
 `german17_built` fixture (tests/e2e/conftest.py). Direct-Python-API
 convention throughout, except the explicit MCP-tool-layer check at the end
 (tests/conftest.py's `call_tool` helper).

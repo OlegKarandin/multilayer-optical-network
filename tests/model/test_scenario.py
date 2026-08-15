@@ -316,8 +316,8 @@ def test_protection_constraints_produce_srlg_disjoint_protected_service():
 
 
 @pytest.mark.skipif(
-    not os.environ.get("MOMCP_RUN_GNPY_E2E"),
-    reason="slow real-GNPy build; set MOMCP_RUN_GNPY_E2E=1 to run")
+    not os.environ.get("OPTICAL_NET_RUN_GNPY_E2E"),
+    reason="slow real-GNPy build; set OPTICAL_NET_RUN_GNPY_E2E=1 to run")
 def test_german_17_end_to_end_real_adapter():
     """Full build against the real GNPy adapter: gravity demands → packer →
     materialized clone → QoT settle. Opt-in (slow)."""
