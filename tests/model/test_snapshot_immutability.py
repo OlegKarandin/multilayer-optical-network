@@ -1,10 +1,10 @@
 import pytest
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel, FrozenModelError
-from multilayer_optical_mcp.model.snapshots import SnapshotStore
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel, FrozenModelError
+from multilayer_optical_network.model.snapshots import SnapshotStore
 
 
 def _seed() -> NetworkModel:

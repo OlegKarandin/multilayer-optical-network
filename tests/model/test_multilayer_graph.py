@@ -1,16 +1,16 @@
 # tests/model/test_multilayer_graph.py
 """Layered auxiliary graph: existing lightpaths -> LPE edges (residual,
 margin-gated); free wavelengths -> WLE edges driven from the OMS bitmask."""
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.spectrum import SpectrumGrid
-from multilayer_optical_mcp.model.multilayer_graph import (
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.spectrum import SpectrumGrid
+from multilayer_optical_network.model.multilayer_graph import (
     build_layered_graph, ACCESS, WLIN, WLOUT, lpe_edges, wle_count_on_layer, place_demands,
 )
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
 
 class _ConstQot:
@@ -109,8 +109,8 @@ def test_forbidden_asset_drops_lpe_and_wle():
 # place_demands tests
 # ---------------------------------------------------------------------------
 
-from multilayer_optical_mcp.model.assets import FiberType as _FT, Fiber as _F, Amplifier as _A, OMS as _O, Lightpath as _L
-from multilayer_optical_mcp.model.ip_assets import Router as _R, IPLink as _I, Service
+from multilayer_optical_network.model.assets import FiberType as _FT, Fiber as _F, Amplifier as _A, OMS as _O, Lightpath as _L
+from multilayer_optical_network.model.ip_assets import Router as _R, IPLink as _I, Service
 
 
 class FakeQot:
@@ -214,7 +214,7 @@ def _groom_plus_gap_model() -> NetworkModel:
 
 
 def _TM_helper():
-    from multilayer_optical_mcp.model.assets import TransceiverMode
+    from multilayer_optical_network.model.assets import TransceiverMode
     return TransceiverMode(id="100G", bitrate_gbps=100.0, required_gsnr_db=12.0,
                            symbol_rate_baud=32e9, channel_spacing_hz=100e9)
 
@@ -241,7 +241,7 @@ def test_new_only_budget_not_starved_by_wavelength_variants():
     """The distinct 2-hop route must be reachable even though >_PATH_BUDGET
     lambda-variants of the cheaper 1-hop route precede it in weight order (they
     would exhaust a raw-per-emission budget before the distinct route is seen)."""
-    from multilayer_optical_mcp.model.spectrum import SpectrumGrid
+    from multilayer_optical_network.model.spectrum import SpectrumGrid
     grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=80)
     n = _cheap_route_plus_distinct_route()
     g = build_layered_graph(n, grid=grid)
@@ -430,7 +430,7 @@ def _two_ip_bound_lightpaths_model() -> NetworkModel:
 def test_offered_load_map_built_once_per_graph_build(monkeypatch):
     """S5-8/S7-8: the offered-load map is built ONCE per build_layered_graph,
     not rebuilt inside the per-lightpath loop (O(L·S) -> O(L+S))."""
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_ip_bound_lightpaths_model()
     calls = {"n": 0}
     real = ip_routing.offered_load_per_link

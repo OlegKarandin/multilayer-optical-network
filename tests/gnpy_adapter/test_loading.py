@@ -1,5 +1,5 @@
 import pytest
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
 
 
 def test_empty_loading():

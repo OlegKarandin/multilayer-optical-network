@@ -1,10 +1,10 @@
 import json
 import math
 import pytest
-from multilayer_optical_mcp.server import build_app
-from multilayer_optical_mcp.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, Lightpath, Transceiver
-from multilayer_optical_mcp.model.modes import default_modes
-from multilayer_optical_mcp.model.qot import QoTState
+from multilayer_optical_network.server import build_app
+from multilayer_optical_network.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, Lightpath, Transceiver
+from multilayer_optical_network.model.modes import default_modes
+from multilayer_optical_network.model.qot import QoTState
 from tests.conftest import call_tool
 
 
@@ -149,7 +149,7 @@ def _seed_gnpy_app_with_two_amp_lightpath():
     note), so inject_degradation's internal recompute_qot_under_loading runs
     actual physics rather than reading a manually-set QoTState. Mirrors
     tests/model/test_whatif.py's _one_edge_model + _live_model_one_lightpath."""
-    from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+    from multilayer_optical_network.model.topology_import import model_from_abstract_graph
     modes = default_modes()
     base = model_from_abstract_graph({
         "nodes": [{"id": 0}, {"id": 1}],
@@ -254,7 +254,7 @@ def test_recompute_qot_under_loading_tool_still_tolerates_shared_frequency():
     # frequency (as ordinary wavelength reuse on physically disjoint fibers
     # would produce) is not a clash, so this tool must NOT route through
     # LoadingState.union() the way compute_qot now does.
-    from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+    from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
     modes = default_modes()
     base = model_from_abstract_graph({

@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/model/multilayer_graph.py
+# src/multilayer_optical_network/model/multilayer_graph.py
 """Layered IP+optical auxiliary graph (Zhu/Mukherjee model, per-wavelength
 layers, no wavelength conversion) + IGABAG single-demand placement.
 

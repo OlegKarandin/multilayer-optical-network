@@ -11,7 +11,7 @@ so that the test suite stays synchronous and independent of async machinery.
 
 from __future__ import annotations
 
-from multilayer_optical_mcp.server import build_app
+from multilayer_optical_network.server import build_app
 from tests.conftest import call_tool
 
 _EXPECTED_TOOLS = {
@@ -114,21 +114,21 @@ def test_snapshot_diff_returns_structured_delta():
 def test_snapshot_restore_on_expired_id_returns_typed_error():
     """Regression for the audit's Critical finding: an evicted/unknown
     snapshot id must return a typed error, not raise KeyError."""
-    from multilayer_optical_mcp.server import build_app
+    from multilayer_optical_network.server import build_app
     app = build_app()
     out = call_tool(app, "snapshot_restore", snapshot_id="nope")
     assert "error" in out
 
 
 def test_snapshot_branch_on_expired_id_returns_typed_error():
-    from multilayer_optical_mcp.server import build_app
+    from multilayer_optical_network.server import build_app
     app = build_app()
     out = call_tool(app, "snapshot_branch", parent_id="nope")
     assert "error" in out
 
 
 def test_snapshot_diff_on_expired_id_returns_typed_error():
-    from multilayer_optical_mcp.server import build_app
+    from multilayer_optical_network.server import build_app
     app = build_app()
     out = call_tool(app, "snapshot_diff", a_id="nope", b_id="also-nope")
     assert "error" in out

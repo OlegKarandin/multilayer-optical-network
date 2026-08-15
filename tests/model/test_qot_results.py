@@ -1,9 +1,9 @@
 import time
 import pytest
-from multilayer_optical_mcp.model.qot import (
+from multilayer_optical_network.model.qot import (
     QoTBreakdown, ElementSnapshot,
 )
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.qot_results import QoTResultStore
 
 
 def _bd():

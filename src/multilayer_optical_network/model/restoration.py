@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/model/restoration.py
+# src/multilayer_optical_network/model/restoration.py
 """Per-service restoration: enumerate recovery candidates over survivors.
 
 Read-only. Prunes the layered graph by an avoid-set (failed assets / SRLGs / risk

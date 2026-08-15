@@ -1089,7 +1089,7 @@ def build_app(*, model: NetworkModel | None = None,
 def main() -> None:
     """Entry-point for running the MCP server (stdio transport). With
     --topology, seeds the model from a topology JSON file; adding --state also
-    applies an operating-state file built by `multilayer-optical-mcp-build`
+    applies an operating-state file built by `multilayer-optical-network-build`
     (see state_file.load_model_from_state_file). Without either, starts with
     the empty NetworkModel as before."""
     import argparse

@@ -2,12 +2,12 @@
 chain (each OMS's dst_node must equal the next OMS's src_node). A gap or
 inversion otherwise passes silently and surfaces only at propagation time."""
 import pytest
-from multilayer_optical_mcp.model.assets import ROADM
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import ROADM
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, Lightpath, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
 
 
 def _base() -> NetworkModel:

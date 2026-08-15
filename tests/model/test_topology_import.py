@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from multilayer_optical_mcp.data import reference_topology
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.assets import TransceiverMode
+from multilayer_optical_network.data import reference_topology
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.assets import TransceiverMode
 
 GERMAN_17 = reference_topology("german_17")
 

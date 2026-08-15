@@ -1,19 +1,19 @@
 """compute_restoration MCP tool returns a structured candidate list."""
 import pytest
-from multilayer_optical_mcp.model.restoration import (
+from multilayer_optical_network.model.restoration import (
     RestorationResult, RestorationCandidate,
 )
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.multilayer_graph import NewLightpathRun
-from multilayer_optical_mcp.model.views import restoration_result_dict
-from multilayer_optical_mcp.model.route_service import (
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.multilayer_graph import NewLightpathRun
+from multilayer_optical_network.model.views import restoration_result_dict
+from multilayer_optical_network.model.route_service import (
     RouteServiceResult, RouteServiceCandidate, RoutePair,
 )
-from multilayer_optical_mcp.model.objective import ObjectiveResult
-from multilayer_optical_mcp.model.assets import FiberType
-from multilayer_optical_mcp.model.ip_assets import Router, Service
-from multilayer_optical_mcp.server import build_app
-from multilayer_optical_mcp.testing import add_bidir_span
+from multilayer_optical_network.model.objective import ObjectiveResult
+from multilayer_optical_network.model.assets import FiberType
+from multilayer_optical_network.model.ip_assets import Router, Service
+from multilayer_optical_network.server import build_app
+from multilayer_optical_network.testing import add_bidir_span
 from tests.conftest import call_tool
 
 
@@ -61,7 +61,7 @@ def _seed(app):
 
 
 def test_evaluate_objective_result_dict_shape():
-    from multilayer_optical_mcp.model.views import objective_result_dict
+    from multilayer_optical_network.model.views import objective_result_dict
     obj = ObjectiveResult(
         spectrum_used=4, transponders=2.0, max_util=0.5, dropped_traffic=0.0,
         added_latency=1.2, total_margin=15.0, services_at_risk=0, scalar=-10.0,
@@ -74,7 +74,7 @@ def test_evaluate_objective_result_dict_shape():
 
 
 def test_route_service_result_dict_shape():
-    from multilayer_optical_mcp.model.views import route_service_result_dict
+    from multilayer_optical_network.model.views import route_service_result_dict
     cand = RouteServiceCandidate(
         lever="new_lightpath", reused_lightpaths=(),
         new_lightpaths=(NewLightpathRun(("omsAB",), 0, "100G", 15.0, 100.0),),
@@ -148,7 +148,7 @@ def test_route_service_and_evaluate_objective_tools_registered():
 def test_route_service_tool_sanitizes_nonfinite_cost_vector():
     import json
     import math
-    from multilayer_optical_mcp.model.assets import Lightpath
+    from multilayer_optical_network.model.assets import Lightpath
 
     app = build_app()
     n = app._snapshots.current()

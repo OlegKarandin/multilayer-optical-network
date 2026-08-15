@@ -10,12 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from multilayer_optical_mcp import build_cli
-from multilayer_optical_mcp.model.modes import default_modes
-from multilayer_optical_mcp.model.scenario import ScenarioReport, ScenarioResult
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.state_file import load_model_from_state_file
+from multilayer_optical_network import build_cli
+from multilayer_optical_network.model.modes import default_modes
+from multilayer_optical_network.model.scenario import ScenarioReport, ScenarioResult
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.state_file import load_model_from_state_file
 
 TOPOLOGY = {
     "graph": {
@@ -57,7 +57,7 @@ def topo(tmp_path: Path) -> Path:
 
 
 def _run(monkeypatch, topo: Path, out: Path, *extra):
-    monkeypatch.setattr(sys, "argv", ["multilayer-optical-mcp-build",
+    monkeypatch.setattr(sys, "argv", ["multilayer-optical-network-build",
                                       "--topology", str(topo), "--out", str(out),
                                       *extra])
     build_cli.main()

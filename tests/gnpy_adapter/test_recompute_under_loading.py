@@ -1,10 +1,10 @@
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.adapter import (
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.adapter import (
     recompute_qot_under_loading,
     unattributed_channel_freqs_hz,
 )
-from multilayer_optical_mcp.testing import _model_with_lightpath
+from multilayer_optical_network.testing import _model_with_lightpath
 
 
 def test_unattributed_channel_freqs_hz_direct():

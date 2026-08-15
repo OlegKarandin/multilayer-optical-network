@@ -3,7 +3,7 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from multilayer_optical_mcp.model.violations import (
+from multilayer_optical_network.model.violations import (
     ModeInfeasibleViolation, SpectrumClashViolation, IpLinkOverloadViolation,
     DroppedTrafficViolation, DisjointnessCollapseViolation,
     ProtectionNotViableViolation, ProtectionOversubscribedViolation,

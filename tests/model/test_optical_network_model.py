@@ -19,9 +19,9 @@ from pathlib import Path
 
 import pytest
 
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.model.assets import (
     Amplifier,
     Direction,
     Fiber,
@@ -34,15 +34,15 @@ from multilayer_optical_mcp.model.assets import (
     Transceiver,
     TransceiverMode,
 )
-from multilayer_optical_mcp.model.ip_assets import IPLink, Router, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import FrozenModelError, NetworkModel
-from multilayer_optical_mcp.model.optical_network import (
+from multilayer_optical_network.model.ip_assets import IPLink, Router, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import FrozenModelError, NetworkModel
+from multilayer_optical_network.model.optical_network import (
     OpticalNetworkModel,
     lightpath_footprint,
 )
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.qot_results import QoTResultStore
 
 
 def _modes() -> ModeRegistry:
@@ -194,7 +194,7 @@ def test_optical_model_mark_and_clear_failed():
 def test_lightpath_footprint_helpers_available_from_both_modules():
     """The three footprint helpers moved to optical_network; exposure re-exports
     them so its five existing consumers are untouched."""
-    from multilayer_optical_mcp.model import exposure
+    from multilayer_optical_network.model import exposure
 
     n = _toy_optical()
     fp = lightpath_footprint(n, ("oms-AZ",))
@@ -244,9 +244,9 @@ def test_optical_model_imports_without_ip_layer():
     other tests green while silently breaking the reuse claim the split exists
     to deliver."""
     code = (
-        "import multilayer_optical_mcp.model.optical_network;"
-        "import multilayer_optical_mcp.gnpy_adapter.adapter;"
-        "import multilayer_optical_mcp.gnpy_adapter.synthesize;"
+        "import multilayer_optical_network.model.optical_network;"
+        "import multilayer_optical_network.gnpy_adapter.adapter;"
+        "import multilayer_optical_network.gnpy_adapter.synthesize;"
         "import sys;"
         "bad=[m for m in sys.modules "
         "if m.endswith(('.ip_assets','.network','.ip_routing'))];"
@@ -254,8 +254,8 @@ def test_optical_model_imports_without_ip_layer():
     )
     # The package is imported from the source tree (pytest's pythonpath=src),
     # not installed, so the child needs the same src root on PYTHONPATH.
-    import multilayer_optical_mcp
-    src_root = str(Path(multilayer_optical_mcp.__file__).resolve().parents[1])
+    import multilayer_optical_network
+    src_root = str(Path(multilayer_optical_network.__file__).resolve().parents[1])
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join(
         [src_root] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])

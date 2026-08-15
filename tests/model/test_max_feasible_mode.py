@@ -5,13 +5,13 @@ highest-bitrate mode it could carry, and classifies the direction relative to th
 frozen current mode. Advisory only — validate_plan's MODE_INFEASIBLE stays the
 commit gate; this view never mutates and never blocks.
 """
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import (
     OMS, ROADM, TransceiverMode, Lightpath,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.whatif import max_feasible_mode_view
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.whatif import max_feasible_mode_view
 
 
 def _model() -> NetworkModel:

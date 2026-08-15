@@ -9,13 +9,13 @@ exposure.path_endpoint_exclusions / path_basis_keys.
 """
 from __future__ import annotations
 
-from multilayer_optical_mcp.model.assets import Lightpath, SRLG, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import IPLink, Service
-from multilayer_optical_mcp.model.exposure import path_basis_keys, split_shared_keys
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.solvers import check_disjointness
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.model.validate import _disjointness_findings, ViolationType
+from multilayer_optical_network.model.assets import Lightpath, SRLG, TransceiverMode
+from multilayer_optical_network.model.ip_assets import IPLink, Service
+from multilayer_optical_network.model.exposure import path_basis_keys, split_shared_keys
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.solvers import check_disjointness
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.validate import _disjointness_findings, ViolationType
 
 
 def _importer_two_route_service():

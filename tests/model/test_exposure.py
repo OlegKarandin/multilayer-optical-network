@@ -1,9 +1,9 @@
 import pytest
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.exposure import (
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.exposure import (
     ExposureResult, compute_exposure, service_asset_set, path_basis_keys,
 )
 

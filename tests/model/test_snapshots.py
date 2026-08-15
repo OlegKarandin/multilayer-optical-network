@@ -1,13 +1,13 @@
 import time
 import pytest
-from multilayer_optical_mcp.model.assets import ROADM
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import ROADM
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, Lightpath, TransceiverMode, Transceiver,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.snapshots import SnapshotStore
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.snapshots import SnapshotStore
 
 
 def _seed() -> NetworkModel:
@@ -123,7 +123,7 @@ def test_diff_modified_lightpath_mode():
 
 
 # --- Phase 7 Task 1: clone() (already landed C3), diff_models, SnapshotStore.put ---
-from multilayer_optical_mcp.model.snapshots import diff_models
+from multilayer_optical_network.model.snapshots import diff_models
 
 
 def _empty_model():

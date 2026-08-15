@@ -55,7 +55,7 @@ def load_modulation_formats(yaml_path: Path) -> ModeRegistry:
 def default_modes() -> ModeRegistry:
     """The packaged modulation formats, parsed once and shared."""
     yaml_path = (
-        importlib.resources.files("multilayer_optical_mcp")
+        importlib.resources.files("multilayer_optical_network")
         / "data"
         / "modulation_formats.yaml"
     )

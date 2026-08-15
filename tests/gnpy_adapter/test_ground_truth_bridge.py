@@ -2,16 +2,16 @@
 import json
 import math
 
-from multilayer_optical_mcp.data import reference_topology
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.data import reference_topology
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.model.assets import (
     Amplifier, Direction, Fiber, FiberType, OMS, ROADM, Transceiver, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
 from tests.conftest import FIXTURES_DIR
 

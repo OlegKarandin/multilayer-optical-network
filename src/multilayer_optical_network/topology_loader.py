@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/topology_loader.py
+# src/multilayer_optical_network/topology_loader.py
 """Load a NetworkModel + static SRLGs from a topology JSON file at server
 startup. Deployment/config-only: builds on model_from_abstract_graph and
 add_srlg, both of which already exist -- this module adds no modeling logic

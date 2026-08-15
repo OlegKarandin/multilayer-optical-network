@@ -7,8 +7,8 @@ build_si_for_loading must build gnpy's `tx_power` from a dedicated
 reference), NOT from the -20 dBm pch default which made the TX-OSNR budget 20 dB
 too optimistic.
 """
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.translate import build_si_for_loading
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.translate import build_si_for_loading
 
 LOADING = LoadingState((Channel(193.4e12, 100e9, None, "M"),))
 

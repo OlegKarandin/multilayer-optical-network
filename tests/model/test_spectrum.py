@@ -4,13 +4,13 @@ Occupancy is STORED as one integer bit-vector per OMS; feasibility along a path
 is a bitwise OR of the path's OMS masks. (This is not the IP-capacity
 'derived, never stored' rule — that is about capacity = f(mode), not spectrum.)
 """
-from multilayer_optical_mcp.model.assets import ROADM
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import ROADM
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, Lightpath, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.spectrum import (
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.spectrum import (
     SpectrumGrid, build_spectrum_state, free_slots_along, first_fit_slot,
     reserve, check_spectrum_feasibility, FeasibilityResult,
 )

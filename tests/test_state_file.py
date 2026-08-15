@@ -4,22 +4,22 @@ from pathlib import Path
 
 import pytest
 
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.ip_assets import IPLink, Service
-from multilayer_optical_mcp.model.ip_routing import simulate_ip_routing
-from multilayer_optical_mcp.model.modes import default_modes
-from multilayer_optical_mcp.model.objective import evaluate_objective
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.snapshots import diff_models
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.state_file import (
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.ip_assets import IPLink, Service
+from multilayer_optical_network.model.ip_routing import simulate_ip_routing
+from multilayer_optical_network.model.modes import default_modes
+from multilayer_optical_network.model.objective import evaluate_objective
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.snapshots import diff_models
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.state_file import (
     FORMAT_VERSION,
     StateFileError,
     dump_state,
     load_state,
     topology_fingerprint,
 )
-from multilayer_optical_mcp.testing import TOPOLOGY, _bare, _built
+from multilayer_optical_network.testing import TOPOLOGY, _bare, _built
 
 
 def test_fingerprint_is_stable_and_prefixed():
@@ -179,7 +179,7 @@ def test_load_state_rejects_a_malformed_record():
         load_state(_bare(), doc)
 
 
-from multilayer_optical_mcp.state_file import load_model_from_state_file
+from multilayer_optical_network.state_file import load_model_from_state_file
 
 
 @pytest.fixture
@@ -227,7 +227,7 @@ def test_load_model_from_state_file_warns_on_gnpy_version_mismatch(
     doc["meta"]["gnpy_version"] = "1.0.0"
     state.write_text(json.dumps(doc), encoding="utf-8")
     monkeypatch.setattr(
-        "multilayer_optical_mcp.state_file.running_gnpy_version", lambda: "2.0.0")
+        "multilayer_optical_network.state_file.running_gnpy_version", lambda: "2.0.0")
     modes = default_modes()
     load_model_from_state_file(topo, state, modes=modes)
     err = capsys.readouterr().err
@@ -241,7 +241,7 @@ def test_load_model_from_state_file_does_not_warn_when_gnpy_version_matches(
     doc["meta"]["gnpy_version"] = "2.0.0"
     state.write_text(json.dumps(doc), encoding="utf-8")
     monkeypatch.setattr(
-        "multilayer_optical_mcp.state_file.running_gnpy_version", lambda: "2.0.0")
+        "multilayer_optical_network.state_file.running_gnpy_version", lambda: "2.0.0")
     modes = default_modes()
     load_model_from_state_file(topo, state, modes=modes)
     assert capsys.readouterr().err == ""

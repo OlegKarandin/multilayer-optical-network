@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/model/topology_import.py
+# src/multilayer_optical_network/model/topology_import.py
 """IP-layer half of Phase 6a: NetworkModel <- an abstract node/edge graph.
 
 model_from_abstract_graph builds the optical layer via

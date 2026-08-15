@@ -1,17 +1,17 @@
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, SRLG, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.views import (
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, SRLG, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.views import (
     topology_dict, lightpaths_dict, services_dict,
     traffic_matrix_dict, srlgs_dict, risk_groups_dict,
     validation_report_dict,
 )
-from multilayer_optical_mcp.model.validate import (
+from multilayer_optical_network.model.validate import (
     Violation, ValidationReport, ViolationType,
 )
-from multilayer_optical_mcp.model.violations import (
+from multilayer_optical_network.model.violations import (
     ModeInfeasibleViolation, SpectrumClashViolation, IpLinkOverloadViolation,
     DroppedTrafficViolation, DisjointnessCollapseViolation,
     ProtectionNotViableViolation, ProtectionOversubscribedViolation,
@@ -124,7 +124,7 @@ def test_risk_groups_dict_carries_metadata():
 # ---------------------------------------------------------------------------
 # New tests for Task 7 serializers
 # ---------------------------------------------------------------------------
-from multilayer_optical_mcp.model import views
+from multilayer_optical_network.model import views
 from tests.model.test_ip_routing import _two_link_model
 
 
@@ -163,7 +163,7 @@ def test_grooming_map_dict_both_directions():
 
 def test_ip_routing_result_dict_shape():
     n = _model_with_services()
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     d = views.ip_routing_result_dict(ip_routing.simulate_ip_routing(n))
     assert set(d) == {"utilizations", "congestion", "restored", "dropped"}
     u = {x["ip_link_id"]: x for x in d["utilizations"]}

@@ -1,9 +1,9 @@
 import math
-from multilayer_optical_mcp.model.assets import Direction
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot, gated_qot
+from multilayer_optical_network.model.assets import Direction
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot, gated_qot
 from tests.gnpy_adapter.test_compute_qot import _toy_model
 
 
@@ -33,7 +33,7 @@ def test_both_directions_return_finite_gsnr():
 
 
 def test_gated_qot_returns_worse_of_two_directions(monkeypatch):
-    from multilayer_optical_mcp.gnpy_adapter import adapter as adapter_mod
+    from multilayer_optical_network.gnpy_adapter import adapter as adapter_mod
 
     calls = []
     def fake(**kwargs):

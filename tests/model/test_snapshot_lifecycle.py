@@ -1,9 +1,9 @@
 import time
 import pytest
-from multilayer_optical_mcp.model.assets import TransceiverMode
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.snapshots import SnapshotStore
+from multilayer_optical_network.model.assets import TransceiverMode
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.snapshots import SnapshotStore
 
 
 def _empty():

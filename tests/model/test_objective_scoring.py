@@ -1,13 +1,13 @@
 # tests/model/test_objective_scoring.py
 import pytest
 
-from multilayer_optical_mcp.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, TransceiverMode, Lightpath
-from multilayer_optical_mcp.model.ip_assets import Router, Service, IPLink
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.objective import score_candidate, evaluate_objective, score_pair
-from multilayer_optical_mcp.model.multilayer_graph import Placement, NewLightpathRun
+from multilayer_optical_network.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, TransceiverMode, Lightpath
+from multilayer_optical_network.model.ip_assets import Router, Service, IPLink
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.objective import score_candidate, evaluate_objective, score_pair
+from multilayer_optical_network.model.multilayer_graph import Placement, NewLightpathRun
 
 
 def _empty_net_model():
@@ -58,7 +58,7 @@ def test_score_candidate_matches_real_commit(diamond_service):
     scored = score_candidate(model, cand, svc)
     # Independently materialize the same candidate on a clone and score directly:
     work = model.clone()
-    from multilayer_optical_mcp.model.objective import apply_candidate
+    from multilayer_optical_network.model.objective import apply_candidate
     apply_candidate(work, cand, svc)
     assert scored == evaluate_objective(work)   # identical apply path -> identical numbers
 
@@ -144,7 +144,7 @@ def test_score_pair_counts_both_legs_margin_when_working_and_protection_share_an
     # score_pair does, then sum margin_db over every lightpath that still has
     # a recorded QoT state -- evaluate_objective's own total_margin loop.
     work = model.clone()
-    from multilayer_optical_mcp.model.objective import apply_candidate, provision_new_runs
+    from multilayer_optical_network.model.objective import apply_candidate, provision_new_runs
     seeded_working = apply_candidate(work, working, work.get_service(svc.id),
                                      prefix="score-work")
     _ip_path, seeded_protection = provision_new_runs(
@@ -207,8 +207,8 @@ def test_provision_new_runs_stitches_reused_leg_into_ip_path():
     apply_op(RerouteService(which="protection")) actually writes the reused
     segment onto Service.protection_path, exactly as allocation.py's _pack
     does for a real solve_allocation commit."""
-    from multilayer_optical_mcp.model.objective import provision_new_runs
-    from multilayer_optical_mcp.model.plan import apply_op, RerouteService
+    from multilayer_optical_network.model.objective import provision_new_runs
+    from multilayer_optical_network.model.plan import apply_op, RerouteService
 
     n = _shrunk_reuse_model()
     svc = n.get_service("svc")
@@ -273,11 +273,11 @@ def test_score_candidate_counts_both_colocated_lightpaths_margin():
     Now that apply_candidate re-applies its own seeds before returning (Fix
     1), score_candidate's clone has BOTH lightpaths' QoT correct, and
     total_margin equals the direct sum of both -- no silent skip."""
-    from multilayer_optical_mcp.model.ip_assets import Service
-    from multilayer_optical_mcp.model.multilayer_graph import build_layered_graph
-    from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore
-    from multilayer_optical_mcp.model.spectrum import FillPolicy
+    from multilayer_optical_network.model.ip_assets import Service
+    from multilayer_optical_network.model.multilayer_graph import build_layered_graph
+    from multilayer_optical_network.model.allocation import make_adapter_evaluator
+    from multilayer_optical_network.model.qot_results import QoTResultStore
+    from multilayer_optical_network.model.spectrum import FillPolicy
     from tests.model.test_fill_policy import (
         _shared_oms_mesh_model, _runs_using, place_demands,
     )
@@ -314,7 +314,7 @@ def test_score_candidate_counts_both_colocated_lightpaths_margin():
     # comparison -- otherwise this hand-rolled reimplementation just
     # reintroduces the bystander-wipe bug score_candidate itself no longer has.
     work = n.clone()
-    from multilayer_optical_mcp.model.objective import (
+    from multilayer_optical_network.model.objective import (
         apply_candidate, _snapshot_lightpath_qot, _restore_bystander_qot,
     )
     bystanders = _snapshot_lightpath_qot(work)
@@ -355,7 +355,7 @@ def test_apply_candidate_disambiguates_on_id_collision(diamond_service):
     """A real committer re-processing the same service/demand id after its
     prior lightpath was cut must not silently overwrite (or crash on) the
     prior lightpath's id -- _mint_unique must pick a distinct id."""
-    from multilayer_optical_mcp.model.objective import apply_candidate
+    from multilayer_optical_network.model.objective import apply_candidate
     model, svc = diamond_service
     model.add_lightpath(Lightpath(id=f"lp-cand-{svc.id}-0", oms_sequence=("omsAB",),
                                   mode_id="100G", center_freq_hz=193.4e12))
@@ -500,7 +500,7 @@ def test_apply_candidate_accepts_real_committer_prefix_cand(diamond_service):
         new_lightpaths=(NewLightpathRun(("omsAB",), 0, "100G", 15.0, 100.0,
                                         src_node="A", dst_node="B"),),
         restored_gbps=100.0, shortfall_gbps=0.0)
-    from multilayer_optical_mcp.model.objective import apply_candidate
+    from multilayer_optical_network.model.objective import apply_candidate
     work = model.clone()
     # Must not raise ValueError for reserved prefix "cand"
     apply_candidate(work, candidate, svc, prefix="cand")
@@ -513,7 +513,7 @@ def test_apply_candidate_accepts_default_prefix(diamond_service):
         new_lightpaths=(NewLightpathRun(("omsAB",), 0, "100G", 15.0, 100.0,
                                         src_node="A", dst_node="B"),),
         restored_gbps=100.0, shortfall_gbps=0.0)
-    from multilayer_optical_mcp.model.objective import apply_candidate
+    from multilayer_optical_network.model.objective import apply_candidate
     work = model.clone()
     # Must not raise ValueError for default prefix (="cand")
     apply_candidate(work, candidate, svc)
@@ -527,7 +527,7 @@ def test_provision_new_runs_accepts_reserved_prefix_prot(diamond_service):
         new_lightpaths=(NewLightpathRun(("omsAB",), 0, "100G", 15.0, 100.0,
                                         src_node="A", dst_node="B"),),
         restored_gbps=100.0, shortfall_gbps=0.0)
-    from multilayer_optical_mcp.model.objective import provision_new_runs
+    from multilayer_optical_network.model.objective import provision_new_runs
     work = model.clone()
     # Must not raise ValueError for reserved prefix "prot"
     provision_new_runs(work, placement, svc, prefix="prot")
@@ -541,7 +541,7 @@ def test_apply_candidate_rejects_prefix_colliding_with_reserved(diamond_service)
         new_lightpaths=(NewLightpathRun(("omsAB",), 0, "100G", 15.0, 100.0,
                                         src_node="A", dst_node="B"),),
         restored_gbps=100.0, shortfall_gbps=0.0)
-    from multilayer_optical_mcp.model.objective import apply_candidate
+    from multilayer_optical_network.model.objective import apply_candidate
     work = model.clone()
     with pytest.raises(ValueError, match="collides with reserved committer"):
         apply_candidate(work, candidate, svc, prefix="cand-explore")
@@ -555,7 +555,7 @@ def test_provision_new_runs_rejects_prefix_colliding_with_reserved(diamond_servi
         new_lightpaths=(NewLightpathRun(("omsAB",), 0, "100G", 15.0, 100.0,
                                         src_node="A", dst_node="B"),),
         restored_gbps=100.0, shortfall_gbps=0.0)
-    from multilayer_optical_mcp.model.objective import provision_new_runs
+    from multilayer_optical_network.model.objective import provision_new_runs
     work = model.clone()
     with pytest.raises(ValueError, match="collides with reserved committer"):
         provision_new_runs(work, placement, svc, prefix="prot2")
@@ -569,7 +569,7 @@ def test_apply_candidate_accepts_score_prefix_no_collision(diamond_service):
         new_lightpaths=(NewLightpathRun(("omsAB",), 0, "100G", 15.0, 100.0,
                                         src_node="A", dst_node="B"),),
         restored_gbps=100.0, shortfall_gbps=0.0)
-    from multilayer_optical_mcp.model.objective import apply_candidate
+    from multilayer_optical_network.model.objective import apply_candidate
     work = model.clone()
     # Must not raise ValueError for non-reserved, non-colliding prefix
     apply_candidate(work, candidate, svc, prefix="score-cand")

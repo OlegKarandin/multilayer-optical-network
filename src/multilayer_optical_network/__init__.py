@@ -1,4 +1,4 @@
-"""Public API for multilayer-optical-mcp.
+"""Public API for multilayer-optical-network.
 
 This module re-exports the main types and functions that consumers need,
 avoiding the need to import from internal module paths. Imports are lazy to

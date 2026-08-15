@@ -8,19 +8,19 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from multilayer_optical_mcp.data import reference_topology
-from multilayer_optical_mcp.model.assets import ROADM, FiberType, Fiber, OMS
-from multilayer_optical_mcp.model.ip_assets import Router
-from multilayer_optical_mcp.model.modes import ModeRegistry, default_modes
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.model.traffic import generate_demands
+from multilayer_optical_network.data import reference_topology
+from multilayer_optical_network.model.assets import ROADM, FiberType, Fiber, OMS
+from multilayer_optical_network.model.ip_assets import Router
+from multilayer_optical_network.model.modes import ModeRegistry, default_modes
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.traffic import generate_demands
 
 _REPO = Path(__file__).resolve().parents[2]
 
 
 def _modes() -> ModeRegistry:
-    from multilayer_optical_mcp.model.assets import TransceiverMode
+    from multilayer_optical_network.model.assets import TransceiverMode
     return ModeRegistry([
         TransceiverMode(id="400G", bitrate_gbps=400.0, required_gsnr_db=7.1,
                         symbol_rate_baud=87.5e9, channel_spacing_hz=100e9),

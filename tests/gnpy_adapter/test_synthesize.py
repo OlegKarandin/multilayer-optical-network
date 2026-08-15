@@ -1,12 +1,12 @@
-from multilayer_optical_mcp.gnpy_adapter.synthesize import (
+from multilayer_optical_network.gnpy_adapter.synthesize import (
     model_to_gnpy_topology, model_to_gnpy_equipment, nf_type_variety,
 )
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.assets import (
     Amplifier, Fiber, FiberType, OMS, ROADM, TransceiverMode,
 )
-from multilayer_optical_mcp.model.network import NetworkModel
+from multilayer_optical_network.model.network import NetworkModel
 
 
 def _reg():
@@ -51,7 +51,7 @@ def test_nf_type_variety_carries_flat_nf_polynomial():
 
 
 def test_build_gnpy_network_returns_network_with_named_nodes():
-    from multilayer_optical_mcp.gnpy_adapter.synthesize import build_gnpy_network
+    from multilayer_optical_network.gnpy_adapter.synthesize import build_gnpy_network
     eqpt, network = build_gnpy_network(_tiny_model())
     uids = {n.uid for n in network.nodes}
     assert "roadm_0" in uids and "roadm_1" in uids
@@ -132,7 +132,7 @@ def test_equipment_emits_one_fiber_entry_per_registered_type():
 
 def test_non_ssmf_fiber_builds_without_keyerror():
     """S3-1: a second fiber variety must not raise KeyError in network_from_json."""
-    from multilayer_optical_mcp.gnpy_adapter.synthesize import build_gnpy_network
+    from multilayer_optical_network.gnpy_adapter.synthesize import build_gnpy_network
     model = model_from_abstract_graph({
         "nodes": [{"id": 0}, {"id": 1}],
         "edges": [{"src": 0, "dst": 1, "length_km": 80.0,
@@ -149,7 +149,7 @@ def test_amps_share_one_documented_edfa_envelope_regardless_of_gain():
     Only NF and tilt vary per amp. Lock the single-envelope assumption as an
     executable invariant and source the numbers from named constants, not literals.
     """
-    from multilayer_optical_mcp.gnpy_adapter.synthesize import (
+    from multilayer_optical_network.gnpy_adapter.synthesize import (
         _EDFA_GAIN_FLATMAX_DB, _EDFA_GAIN_MIN_DB, _EDFA_P_MAX_DBM,
     )
     n = NetworkModel(modes=_reg())

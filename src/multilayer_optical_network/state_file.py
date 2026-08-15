@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/state_file.py
+# src/multilayer_optical_network/state_file.py
 """Read/write the operating-state file: the loaded steady state a build
 produces, as a DELTA on top of an authored topology JSON.
 

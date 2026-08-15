@@ -6,13 +6,13 @@ oms_sequence -- never on lightpath identity -- so two different lightpaths
 that share a fiber must read as correlated."""
 import pytest
 
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.multilayer_graph import Placement, NewLightpathRun
-from multilayer_optical_mcp.model.multilayer_disjoint import (
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.multilayer_graph import Placement, NewLightpathRun
+from multilayer_optical_network.model.multilayer_disjoint import (
     placement_footprint_keys, disjoint_pairs,
 )
 
@@ -242,7 +242,7 @@ def test_route_service_and_check_disjointness_agree_on_hybrid_placements(diamond
     reused for the hybrid leg, matching how a real caller like
     plan.service_oms_sequence would walk the IP path) and must agree with the
     FIXED layered verdict, not the broken one."""
-    from multilayer_optical_mcp.model.solvers import check_disjointness
+    from multilayer_optical_network.model.solvers import check_disjointness
     model = diamond
     model.add_lightpath(Lightpath("lpM1B", ("omsM1B",), "100G", 193.5e12))
 

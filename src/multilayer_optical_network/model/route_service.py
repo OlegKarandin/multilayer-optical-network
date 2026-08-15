@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/model/route_service.py
+# src/multilayer_optical_network/model/route_service.py
 """Service-level routing/restoration on the layered graph (menu, no-consume).
 
 avoid=None -> first-time routing (empty net -> all-new candidates).

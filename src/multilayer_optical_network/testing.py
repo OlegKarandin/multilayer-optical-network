@@ -15,17 +15,17 @@ references stay intact.
 """
 from __future__ import annotations
 
-from multilayer_optical_mcp.gnpy_adapter.loading import LoadingState
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.gnpy_adapter.loading import LoadingState
+from multilayer_optical_network.model.assets import (
     Amplifier, Direction, Fiber, FiberType, Lightpath, OMS, ROADM,
     TransceiverMode, Transceiver,
 )
-from multilayer_optical_mcp.model.ip_assets import IPLink, Router
-from multilayer_optical_mcp.model.modes import ModeRegistry, default_modes
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.scenario import build_operating_network
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.ip_assets import IPLink, Router
+from multilayer_optical_network.model.modes import ModeRegistry, default_modes
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.scenario import build_operating_network
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
 # 400G needs 10 dB, 200G needs 7 dB; a single 80 km advanced-amp span delivers
 # ~18.3 dB GSNR, so both modes sit comfortably above threshold — steady-state

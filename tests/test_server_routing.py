@@ -2,9 +2,9 @@
 app. Mirrors test_server_read_tools.py."""
 from __future__ import annotations
 
-from multilayer_optical_mcp.server import build_app
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.server import build_app
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
 from tests.conftest import call_tool
 
 

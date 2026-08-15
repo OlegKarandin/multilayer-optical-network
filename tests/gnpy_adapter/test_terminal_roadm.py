@@ -9,13 +9,13 @@ S8-3 (failure-side mirror): because the dst ROADM is absent from OMS.elements,
 oms_seq_asset_set can't match it, so inject_failure(("roadm_<dst>",)) no-ops.
 Crossing detection must include the terminal ROADM.
 """
-from multilayer_optical_mcp.model.assets import Direction, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.model.whatif import inject_failure
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
+from multilayer_optical_network.model.assets import Direction, Lightpath, TransceiverMode
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.whatif import inject_failure
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
 
 MODE = "400G@7.1dB"
 LOADING = LoadingState(channels=(Channel(193.4e12, 100e9, None, MODE),))

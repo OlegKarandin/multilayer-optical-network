@@ -1,12 +1,12 @@
 # tests/model/test_objective.py
 import pytest
 
-from multilayer_optical_mcp.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.objective import evaluate_objective, ObjectiveResult
+from multilayer_optical_network.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, Lightpath, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.objective import evaluate_objective, ObjectiveResult
 
 
 def _base_model():
@@ -88,7 +88,7 @@ def down_and_congested_model():
 
 def test_dropped_traffic_sums_down_and_overflow_without_double_counting(
         down_and_congested_model):
-    from multilayer_optical_mcp.model.ip_routing import simulate_ip_routing
+    from multilayer_optical_network.model.ip_routing import simulate_ip_routing
     n = down_and_congested_model
     ipr = simulate_ip_routing(n)
     assert {d.service_id for d in ipr.dropped_services} == {"svc-AB"}

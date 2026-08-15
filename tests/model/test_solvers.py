@@ -8,15 +8,15 @@ from __future__ import annotations
 
 from typing import List
 
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, SRLG, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.solvers import (
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, SRLG, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.solvers import (
     SolverStatus, RoutingResult, DisjointnessResult,
     compute_paths, check_disjointness, compute_disjoint_paths,
 )
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
 
 def _model_two_paths() -> NetworkModel:
@@ -337,7 +337,7 @@ def test_compute_paths_excludes_oms_crossing_failed_asset():
     test_compute_paths_returns_both_routes) -- the counter-example this test
     guards against is oms-north (which crosses the now-failed fiber-north)
     reappearing in the result."""
-    from multilayer_optical_mcp.model.whatif import inject_failure
+    from multilayer_optical_network.model.whatif import inject_failure
     n = _model_two_paths()
     inject_failure(n, ("fiber-north",))
     res = compute_paths(n, "A", "B", k=2)
@@ -349,7 +349,7 @@ def test_compute_paths_excludes_oms_crossing_failed_asset():
 def test_compute_paths_all_routes_failed_is_typed_no_solution():
     """Both routes failed -> typed NO_SOLUTION, never an exception and never a
     solution that crosses a failed fiber."""
-    from multilayer_optical_mcp.model.whatif import inject_failure
+    from multilayer_optical_network.model.whatif import inject_failure
     n = _model_two_paths()
     inject_failure(n, ("fiber-north", "fiber-south"))
     res = compute_paths(n, "A", "B", k=2)
@@ -366,7 +366,7 @@ def test_compute_disjoint_paths_excludes_pair_crossing_failed_asset():
     (see test_compute_disjoint_paths_physical_finds_pair); the counter-example
     guarded against is that pair (or any pair containing oms-north)
     reappearing after fiber-north is failed."""
-    from multilayer_optical_mcp.model.whatif import inject_failure
+    from multilayer_optical_network.model.whatif import inject_failure
     n = _model_two_paths()
     inject_failure(n, ("fiber-north",))
     res = compute_disjoint_paths(n, "A", "B", basis="physical", level="link",
@@ -388,7 +388,7 @@ def test_compute_disjoint_paths_finds_survivor_pair_when_third_route_available()
     disjoint pair among the survivors (the remaining trunk parallel + the
     distinct A->C->B route), and that pair must never include the failed
     oms-p0/pfib0."""
-    from multilayer_optical_mcp.model.whatif import inject_failure
+    from multilayer_optical_network.model.whatif import inject_failure
     n = _model_parallels_plus_distinct_route(n_parallels=2)   # oms-p0, oms-p1 (trunk) + oms-AC/oms-CB
     inject_failure(n, ("pfib0",))   # fail one of the two trunk parallels' fiber
     res = compute_disjoint_paths(n, "A", "B", basis="srlg", level="srlg",
@@ -404,11 +404,11 @@ def test_solve_rsa_places_routable_demand_despite_unroutable_sibling():
     """The same bug at the allocation layer: a batch with one routable demand
     and one demand severed by avoid must place the routable one, recording
     the other as unplaced -- not raise and lose the whole batch."""
-    from multilayer_optical_mcp.model.allocation import solve_rsa
+    from multilayer_optical_network.model.allocation import solve_rsa
     n = _model_two_paths()   # A<->B via oms-north AND oms-south (two routes)
 
     def fake_qot(*, oms_sequence, direction, mode_id, loading):
-        from multilayer_optical_mcp.model.qot import QoTState
+        from multilayer_optical_network.model.qot import QoTState
         return QoTState(gsnr_db=20.0, osnr_db=22.0, margin_db=8.0)
 
     demands = [
@@ -438,11 +438,11 @@ def test_solve_rsa_protected_demand_honors_avoid_constraint():
     search, leaving only one surviving route -- no pair of two can be formed,
     so the demand must come back typed `unplaced` (no exception, no pair that
     silently crosses the avoided asset)."""
-    from multilayer_optical_mcp.model.allocation import solve_rsa
+    from multilayer_optical_network.model.allocation import solve_rsa
     n = _model_two_paths()   # A<->B via oms-north AND oms-south (two routes)
 
     def fake_qot(*, oms_sequence, direction, mode_id, loading):
-        from multilayer_optical_mcp.model.qot import QoTState
+        from multilayer_optical_network.model.qot import QoTState
         return QoTState(gsnr_db=20.0, osnr_db=22.0, margin_db=8.0)
 
     demands = [
@@ -549,7 +549,7 @@ def _model_exponential_parallels_plus_bypass(n_hops: int, parallels_per_hop: int
 
 def test_compute_disjoint_paths_finds_bypass_despite_exponential_parallels():
     """Regression for the audit's Critical emission-cap-starvation finding."""
-    from multilayer_optical_mcp.model.solvers import _DISJOINT_EMISSION_CAP
+    from multilayer_optical_network.model.solvers import _DISJOINT_EMISSION_CAP
     n_hops, parallels_per_hop = 10, 2
     # Task-8 fix reviewer's Minor finding: this test's premise depends on
     # 2**n_hops == _DISJOINT_EMISSION_CAP (the chain alone must exactly fill
@@ -579,7 +579,7 @@ def test_compute_disjoint_paths_exhaustive_false_under_genuine_emission_cap_trun
     compute_disjoint_paths necessarily comes back at exactly 1024 items
     (never 1025): the search was really cut short, not merely brushing the
     cap by coincidence, and `exhaustive` must reflect that honestly."""
-    from multilayer_optical_mcp.model.solvers import _DISJOINT_EMISSION_CAP
+    from multilayer_optical_network.model.solvers import _DISJOINT_EMISSION_CAP
     n_hops, parallels_per_hop = 10, 2
     assert parallels_per_hop ** n_hops == _DISJOINT_EMISSION_CAP
     n = _model_exponential_parallels_plus_bypass(n_hops=n_hops, parallels_per_hop=parallels_per_hop)
@@ -645,7 +645,7 @@ def test_compute_disjoint_paths_exhaustive_false_under_candidate_cap_truncation(
     candidate-path cap binds here. Before this fix, `exhaustive` stayed True
     in this exact scenario (a false "not known to be truncated" even though
     one whole route was never even considered)."""
-    from multilayer_optical_mcp.model.solvers import _DISJOINT_CANDIDATE_CAP
+    from multilayer_optical_network.model.solvers import _DISJOINT_CANDIDATE_CAP
     n = _model_n_distinct_routes(_DISJOINT_CANDIDATE_CAP + 1)
     res = compute_disjoint_paths(n, "A", "B", basis="physical", level="link",
                                  best_effort=False)
@@ -657,7 +657,7 @@ def test_compute_disjoint_paths_exhaustive_true_at_exact_candidate_cap():
     """Boundary companion: exactly _DISJOINT_CANDIDATE_CAP distinct routes --
     the search considers every one of them (the cap never actually cuts
     anything off), so `exhaustive` must stay True."""
-    from multilayer_optical_mcp.model.solvers import _DISJOINT_CANDIDATE_CAP
+    from multilayer_optical_network.model.solvers import _DISJOINT_CANDIDATE_CAP
     n = _model_n_distinct_routes(_DISJOINT_CANDIDATE_CAP)
     res = compute_disjoint_paths(n, "A", "B", basis="physical", level="link",
                                  best_effort=False)
@@ -1013,7 +1013,7 @@ def test_compute_disjoint_paths_finds_srlg_disjoint_extremes_under_saturated_bud
     combos, so 32*32==1024==k leaves nothing for resumption to run at all).
     This test builds exactly that regime and confirms the target route's own
     SRLG-pure index-aligned extremes are still found."""
-    from multilayer_optical_mcp.model.solvers import _DISJOINT_EMISSION_CAP, _DISJOINT_CANDIDATE_CAP
+    from multilayer_optical_network.model.solvers import _DISJOINT_EMISSION_CAP, _DISJOINT_CANDIDATE_CAP
     n_hops, parallels_per_hop, n_filler_routes = 6, 2, 31
     assert n_filler_routes + 1 == _DISJOINT_CANDIDATE_CAP
     per_path_cap = _DISJOINT_EMISSION_CAP // _DISJOINT_CANDIDATE_CAP

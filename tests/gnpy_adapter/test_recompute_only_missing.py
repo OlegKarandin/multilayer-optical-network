@@ -10,11 +10,11 @@ below), and (2) it must never suppress the failed-asset sentinel re-derivation
 (S8-1), which relies on running unconditionally every call regardless of
 staleness.
 """
-from multilayer_optical_mcp.gnpy_adapter import adapter as adapter_module
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.gnpy_adapter.adapter import recompute_qot_under_loading
-from multilayer_optical_mcp.model.whatif import loading_from_model
+from multilayer_optical_network.gnpy_adapter import adapter as adapter_module
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.gnpy_adapter.adapter import recompute_qot_under_loading
+from multilayer_optical_network.model.whatif import loading_from_model
 from tests.gnpy_adapter.test_per_path_comb import _diamond_model, ROUTE1, ROUTE2, MODE
 
 

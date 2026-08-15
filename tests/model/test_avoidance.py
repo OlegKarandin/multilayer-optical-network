@@ -1,13 +1,13 @@
 # tests/model/test_avoidance.py
 """Avoidance: route over survivors by pruning forbidden OMS before enumeration.
 Reuses the two-parallel-route shape (oms-north / oms-south, A->B)."""
-from multilayer_optical_mcp.model.assets import ROADM
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import ROADM
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, SRLG, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.solvers import SolverStatus, compute_paths
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.solvers import SolverStatus, compute_paths
 
 
 def _two_parallel() -> NetworkModel:

@@ -1,8 +1,8 @@
 import pytest
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, SRLG, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, SRLG, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
 
 
 def _seed_with_one_iplink() -> NetworkModel:
