@@ -325,7 +325,7 @@ def test_german_17_end_to_end_real_adapter():
     from multilayer_optical_network.model.qot_results import QoTResultStore, QoTCache
     from multilayer_optical_network.model.allocation import make_adapter_evaluator
 
-    graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))
+    graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))["graph"]
     modes = default_modes()
     model = model_from_abstract_graph(graph, modes=modes)
     store = QoTResultStore()
