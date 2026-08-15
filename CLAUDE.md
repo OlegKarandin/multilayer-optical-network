@@ -371,7 +371,7 @@ questions:
    `get_affected_services`, `reroute_service`). Prove the coupling before exposing
    the tools, same discipline as proving `recompute_qot_under_loading` before
    building on the adapter.
-6. **What-if + injection.** `whatif_margin_delta`, `inject_degradation`,
+6. **What-if + injection.** `whatif_margin_threshold_sweep`, `inject_degradation`,
    `inject_failure` on branches.
 7. **Validate + commit + reconcile.** Typed violation list (optical + IP), checking
    every intermediate state of a sequence, not just endpoints — the transient
