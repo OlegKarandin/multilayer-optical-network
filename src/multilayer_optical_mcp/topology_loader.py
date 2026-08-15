@@ -13,8 +13,6 @@ from .model.modes import ModeRegistry
 from .model.network import NetworkModel
 from .model.topology_import import model_from_abstract_graph
 
-MOD_FORMATS_YAML = Path(__file__).resolve().parent / "data" / "modulation_formats.yaml"
-
 
 def load_model_from_topology_file(
     path: str | Path, *, modes: ModeRegistry,

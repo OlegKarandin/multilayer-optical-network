@@ -17,12 +17,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .model.allocation import make_adapter_evaluator
-from .model.modes import load_modulation_formats
+from .model.modes import default_modes
 from .model.qot_results import QoTCache, QoTResultStore
 from .model.scenario import build_operating_network
 from .model.solvers import SolverStatus
 from .state_file import dump_state, running_gnpy_version, topology_fingerprint
-from .topology_loader import MOD_FORMATS_YAML, load_model_from_topology_file
+from .topology_loader import load_model_from_topology_file
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -102,7 +102,7 @@ def main() -> None:
     args = parser.parse_args()
     _validate_out_path(parser, args.out)
 
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     raw = json.loads(Path(args.topology).read_text(encoding="utf-8-sig"))
     fingerprint = topology_fingerprint(raw)
     model = load_model_from_topology_file(args.topology, modes=modes)

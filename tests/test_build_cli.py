@@ -11,12 +11,11 @@ from pathlib import Path
 import pytest
 
 from multilayer_optical_mcp import build_cli
-from multilayer_optical_mcp.model.modes import load_modulation_formats
+from multilayer_optical_mcp.model.modes import default_modes
 from multilayer_optical_mcp.model.scenario import ScenarioReport, ScenarioResult
 from multilayer_optical_mcp.model.solvers import SolverStatus
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 from multilayer_optical_mcp.state_file import load_model_from_state_file
-from multilayer_optical_mcp.topology_loader import MOD_FORMATS_YAML
 
 TOPOLOGY = {
     "graph": {
@@ -41,7 +40,7 @@ def _report(**over):
 
 def _patch_build(monkeypatch, report):
     """Stand in for the real (minutes-to-hours, GNPy-driven) build."""
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     model = model_from_abstract_graph(TOPOLOGY["graph"], modes=modes)
 
     def fake_build(_model, **_kw):
@@ -75,7 +74,7 @@ def test_build_writes_a_state_file_the_server_can_load(monkeypatch, topo, tmp_pa
     assert doc["meta"]["params"]["seed"] == 0
     assert doc["meta"]["report"]["limit"] == "none"
     # The whole point: the artifact round-trips back through the server's loader.
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     assert load_model_from_state_file(topo, out, modes=modes) is not None
 
 
@@ -154,7 +153,7 @@ def _capture_build(monkeypatch, report):
     """Like _patch_build, but records every keyword build_operating_network
     was actually called with, so a test can assert the flag -> kwarg mapping
     directly instead of just asserting the build "succeeded"."""
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     model = model_from_abstract_graph(TOPOLOGY["graph"], modes=modes)
     captured: dict = {}
 

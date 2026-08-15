@@ -324,12 +324,12 @@ _DATA = Path(multilayer_optical_mcp.__file__).resolve().parent / "data"
 def test_german_17_end_to_end_real_adapter():
     """Full build against the real GNPy adapter: gravity demands → packer →
     materialized clone → QoT settle. Opt-in (slow)."""
-    from multilayer_optical_mcp.model.modes import load_modulation_formats
+    from multilayer_optical_mcp.model.modes import default_modes
     from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
     from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
 
     graph = json.loads((_DATA / "german_17.json").read_text(encoding="utf-8"))
-    modes = load_modulation_formats(_DATA / "modulation_formats.yaml")
+    modes = default_modes()
     model = model_from_abstract_graph(graph, modes=modes)
     store = QoTResultStore()
     # Share one content-addressed cache across the whole convergence loop: the

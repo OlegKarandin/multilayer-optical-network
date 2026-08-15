@@ -2,9 +2,9 @@
 import json
 import math
 import pytest
-from multilayer_optical_mcp.server import build_app, MOD_FORMATS_YAML
+from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, Lightpath, Transceiver
-from multilayer_optical_mcp.model.modes import load_modulation_formats
+from multilayer_optical_mcp.model.modes import default_modes
 from multilayer_optical_mcp.model.qot import QoTState
 
 
@@ -155,7 +155,7 @@ def _seed_gnpy_app_with_two_amp_lightpath():
     actual physics rather than reading a manually-set QoTState. Mirrors
     tests/model/test_whatif.py's _one_edge_model + _live_model_one_lightpath."""
     from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     base = model_from_abstract_graph({
         "nodes": [{"id": 0}, {"id": 1}],
         "edges": [{"src": 0, "dst": 1, "length_km": 160.0, "num_spans": 2,
@@ -261,7 +261,7 @@ def test_recompute_qot_under_loading_tool_still_tolerates_shared_frequency():
     # LoadingState.union() the way compute_qot now does.
     from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     base = model_from_abstract_graph({
         "nodes": [{"id": 0}, {"id": 1}],
         "edges": [{"src": 0, "dst": 1, "length_km": 160.0, "num_spans": 2,

@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 import multilayer_optical_mcp
-from multilayer_optical_mcp.model.modes import load_modulation_formats
+from multilayer_optical_mcp.model.modes import default_modes
 from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
 from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
 from multilayer_optical_mcp.model.scenario import build_operating_network
@@ -26,7 +26,7 @@ def german17_built():
         pytest.skip("slow real-GNPy build; set MOMCP_RUN_GNPY_E2E=1 to run")
 
     graph = json.loads((_DATA / "german_17.json").read_text(encoding="utf-8"))
-    modes = load_modulation_formats(_DATA / "modulation_formats.yaml")
+    modes = default_modes()
     model = model_from_abstract_graph(graph, modes=modes)
     store = QoTResultStore()
     cache = QoTCache()
