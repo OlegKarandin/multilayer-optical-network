@@ -1,11 +1,8 @@
-from pathlib import Path
 import pytest
-from multilayer_optical_mcp.model.modes import ModeRegistry, load_modulation_formats
+from multilayer_optical_mcp.model.modes import (
+    ModeRegistry, default_modes, load_modulation_formats,
+)
 from multilayer_optical_mcp.model.assets import TransceiverMode
-
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-MOD_FORMATS_YAML = REPO_ROOT / "modulation_formats.yaml"
 
 
 def test_registry_lookup_and_list():
@@ -21,7 +18,7 @@ def test_registry_lookup_and_list():
 
 
 def test_yaml_loader_constructs_all_eleven_modes():
-    reg = load_modulation_formats(MOD_FORMATS_YAML)
+    reg = default_modes()
     modes = reg.list()
     assert len(modes) == 11
     bitrates = sorted(m.bitrate_gbps for m in modes)
@@ -30,14 +27,14 @@ def test_yaml_loader_constructs_all_eleven_modes():
 
 
 def test_yaml_loader_populates_global_baud_and_spacing_on_every_mode():
-    reg = load_modulation_formats(MOD_FORMATS_YAML)
+    reg = default_modes()
     for m in reg.list():
         assert m.symbol_rate_baud == 87.5e9
         assert m.channel_spacing_hz == 100e9
 
 
 def test_yaml_loader_snr_threshold_matches_file():
-    reg = load_modulation_formats(MOD_FORMATS_YAML)
+    reg = default_modes()
     by_bitrate = {m.bitrate_gbps: m for m in reg.list()}
     assert by_bitrate[300.0].required_gsnr_db == 4.8
     assert by_bitrate[400.0].required_gsnr_db == 7.1
@@ -67,7 +64,7 @@ def test_yaml_loader_reads_per_format_symbol_rate(tmp_path):
 def test_yaml_loader_defaults_roll_off_when_absent():
     """modulation_formats.yaml has no roll_off key anywhere; every mode must
     still get the 0.15 scalar that used to be hardcoded in the adapter."""
-    reg = load_modulation_formats(MOD_FORMATS_YAML)
+    reg = default_modes()
     for m in reg.list():
         assert m.roll_off == 0.15
 

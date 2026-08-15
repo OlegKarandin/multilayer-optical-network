@@ -8,10 +8,10 @@ the real adapter.
 import json
 import os
 import time
-from pathlib import Path
 
 import pytest
 
+from multilayer_optical_mcp.data import reference_topology
 from multilayer_optical_mcp.model.assets import ROADM, FiberType, Fiber, Amplifier, OMS, TransceiverMode, Direction
 from multilayer_optical_mcp.model.ip_assets import Router
 from multilayer_optical_mcp.gnpy_adapter.loading import LoadingState
@@ -314,21 +314,19 @@ def test_protection_constraints_produce_srlg_disjoint_protected_service():
 
 # ------------------------------------------------ real-adapter end-to-end (opt-in)
 
-_REPO = Path(__file__).resolve().parents[2]
-
 
 @pytest.mark.skipif(
-    not os.environ.get("MOMCP_RUN_GNPY_E2E"),
-    reason="slow real-GNPy build; set MOMCP_RUN_GNPY_E2E=1 to run")
+    not os.environ.get("OPTICAL_NET_RUN_GNPY_E2E"),
+    reason="slow real-GNPy build; set OPTICAL_NET_RUN_GNPY_E2E=1 to run")
 def test_german_17_end_to_end_real_adapter():
     """Full build against the real GNPy adapter: gravity demands → packer →
     materialized clone → QoT settle. Opt-in (slow)."""
-    from multilayer_optical_mcp.model.modes import load_modulation_formats
+    from multilayer_optical_mcp.model.modes import default_modes
     from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
     from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
 
-    graph = json.loads((_REPO / "topologies/german_17.json").read_text(encoding="utf-8"))
-    modes = load_modulation_formats(_REPO / "modulation_formats.yaml")
+    graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))
+    modes = default_modes()
     model = model_from_abstract_graph(graph, modes=modes)
     store = QoTResultStore()
     # Share one content-addressed cache across the whole convergence loop: the

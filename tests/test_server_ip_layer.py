@@ -1,9 +1,9 @@
-# tests/test_server_phase5.py
 import pytest
 from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, Lightpath
 from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
 from multilayer_optical_mcp.model.qot import QoTState
+from tests.conftest import call_tool
 
 
 def _seed(app):
@@ -43,15 +43,10 @@ def _seed(app):
     return bitrate
 
 
-def _call(app, name, **kwargs):
-    """Invoke a registered FastMCP tool's underlying function directly."""
-    return app._tool_manager._tools[name].fn(**kwargs)
-
-
 def test_get_ip_topology_annotates_links():
     app = build_app()
     bitrate = _seed(app)
-    d = _call(app, "get_ip_topology")
+    d = call_tool(app, "get_ip_topology")
     links = {link["id"]: link for link in d["ip_links"]}
     assert links["ipAB"]["capacity_gbps"] == bitrate
     assert links["ipAB"]["load_gbps"] == pytest.approx(bitrate * 0.5)
@@ -60,20 +55,20 @@ def test_get_ip_topology_annotates_links():
 def test_get_grooming_map_tool():
     app = build_app()
     _seed(app)
-    d = _call(app, "get_grooming_map")
+    d = call_tool(app, "get_grooming_map")
     assert d["by_service"]["svc-AC"] == ["lpAB", "lpBC"]
 
 
 def test_get_affected_services_tool():
     app = build_app()
     _seed(app)
-    assert _call(app, "get_affected_services", asset_id="lpBC")["services"] == ["svc-AC"]
+    assert call_tool(app, "get_affected_services", asset_id="lpBC")["services"] == ["svc-AC"]
 
 
 def test_simulate_ip_routing_tool():
     app = build_app()
     _seed(app)
-    d = _call(app, "simulate_ip_routing")
+    d = call_tool(app, "simulate_ip_routing")
     assert set(d) == {"utilizations", "congestion", "restored", "dropped"}
     assert d["congestion"] == []
 
@@ -89,11 +84,11 @@ def test_reroute_service_tool_repins_and_resimulates():
     n.set_qot_state("lpAC", QoTState(gsnr_db=30.0, osnr_db=32.0, margin_db=5.0))
     n.add_ip_link(IPLink(id="ipAC", a_router="R-A", z_router="R-C",
                          lightpath_id="lpAC"))
-    out = _call(app, "reroute_service", service_id="svc-AC", ip_path=["ipAC"])
+    out = call_tool(app, "reroute_service", service_id="svc-AC", ip_path=["ipAC"])
     assert out["service_id"] == "svc-AC"
     assert out["working_path"] == ["ipAC"]
     # Load moved: ipAB now idle, ipAC carries the demand.
-    topo = {link["id"]: link for link in _call(app, "get_ip_topology")["ip_links"]}
+    topo = {link["id"]: link for link in call_tool(app, "get_ip_topology")["ip_links"]}
     assert topo["ipAB"]["load_gbps"] == 0.0
     assert topo["ipAC"]["load_gbps"] == pytest.approx(bitrate * 0.5)
 
@@ -102,7 +97,7 @@ def test_reroute_service_tool_rejects_bad_path():
     app = build_app()
     _seed(app)
     with pytest.raises(ValueError, match="does not connect"):
-        _call(app, "reroute_service", service_id="svc-AC", ip_path=["ipAB"])
+        call_tool(app, "reroute_service", service_id="svc-AC", ip_path=["ipAB"])
 
 
 def test_reroute_service_tool_which_protection_returns_protection_path():
@@ -115,7 +110,7 @@ def test_reroute_service_tool_which_protection_returns_protection_path():
     n.set_qot_state("lpAC", QoTState(gsnr_db=30.0, osnr_db=32.0, margin_db=5.0))
     n.add_ip_link(IPLink(id="ipAC", a_router="R-A", z_router="R-C",
                          lightpath_id="lpAC"))
-    out = _call(app, "reroute_service", service_id="svc-AC", ip_path=["ipAC"],
+    out = call_tool(app, "reroute_service", service_id="svc-AC", ip_path=["ipAC"],
                which="protection")
     assert out["service_id"] == "svc-AC"
     assert out["protection_path"] == ["ipAC"]
@@ -123,6 +118,6 @@ def test_reroute_service_tool_which_protection_returns_protection_path():
 
     # omitted `which` still targets working_path (regression guard), unaffected by
     # the protection reroute above:
-    out2 = _call(app, "reroute_service", service_id="svc-AC", ip_path=["ipAC"])
+    out2 = call_tool(app, "reroute_service", service_id="svc-AC", ip_path=["ipAC"])
     assert out2["working_path"] == ["ipAC"]
     assert "protection_path" not in out2

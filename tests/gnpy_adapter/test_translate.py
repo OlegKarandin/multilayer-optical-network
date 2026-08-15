@@ -1,10 +1,9 @@
-from pathlib import Path
 from multilayer_optical_mcp.gnpy_adapter.translate import load_toy
 
+from tests.conftest import FIXTURES_DIR
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-EQPT = REPO_ROOT / "eqpt" / "eqpt_config.json"
-TOPO = REPO_ROOT / "topologies" / "toy_2span.json"
+EQPT = FIXTURES_DIR / "eqpt" / "eqpt_config.json"
+TOPO = FIXTURES_DIR / "toy_2span.json"
 
 
 def test_toy_topology_loads_with_advanced_amp_model():

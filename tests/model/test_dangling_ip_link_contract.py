@@ -16,7 +16,7 @@ from multilayer_optical_mcp.model.exposure import compute_exposure
 from multilayer_optical_mcp.model.objective import evaluate_objective
 from multilayer_optical_mcp.model.validate import validate_plan
 from multilayer_optical_mcp.model.plan import Plan
-from tests.phase7_topology import new_model, add_bidir_span
+from multilayer_optical_mcp.testing import new_model, add_bidir_span
 
 
 def _model_with_dangling_working_leg() -> NetworkModel:
@@ -25,12 +25,12 @@ def _model_with_dangling_working_leg() -> NetworkModel:
     auto-restores onto its protection leg, so it is NOT dropped, but its
     working_path still names the now-removed ip1.
 
-    Built on tests.phase7_topology's synthesizable-topology helpers
+    Built on multilayer_optical_mcp.testing's synthesizable-topology helpers
     (transceiver-terminated ROADMs + paired reverse OMS) rather than a bare
     hand-rolled fixture: validate_plan's empty-plan path drives a real GNPy
     recompute, and gated_qot always evaluates both forward and backward
-    directions, which (per phase7_topology's module docstring, S3-11/S4-2/
-    S4-3) requires transceiver-backed ROADM endpoints and a paired reverse
+    directions, which (per multilayer_optical_mcp.testing's module docstring,
+    S3-11/S4-2/S4-3) requires transceiver-backed ROADM endpoints and a paired reverse
     OMS -- a bare amp+fiber OMS with no transceiver raises a GNPy
     NetworkTopologyError unrelated to this task's dangling-ip-link fix. The
     working (oms1: A->B) and protection (oms2: A->C) legs use DISTINCT node

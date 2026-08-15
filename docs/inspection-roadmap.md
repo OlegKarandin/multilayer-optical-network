@@ -1,5 +1,11 @@
 # Code Inspection Roadmap
 
+> **STALE FINDING COUNTS.** The tallies and "large majority resolved"-style
+> summaries in this document (including the reconciliation note directly below)
+> do not reflect all fixes landed since they were last reconciled. Do not treat
+> any count in this file as a current status. For up-to-date status, check
+> `git log` and the current source directly.
+
 Covers the full stack: network loading → physical layer → routing → restoration.
 Focus is on **assumptions**, not line-by-line correctness.
 
@@ -131,7 +137,7 @@ Focus is on **assumptions**, not line-by-line correctness.
 
 ### Point 11 — RESOLVED via Option B (2026-07-10)
 
-**Landed.** Plan: `docs/plans/2026-07-10-s3-11-symmetrize-toy-drop-synthetic-trx.md`. The toy line
+**Landed.** Plan: `docs/superpowers/plans/2026-07-10-s3-11-symmetrize-toy-drop-synthetic-trx.md`. The toy line
 system was **symmetrized** — a drop `ROADM Z` was added to `toy_2span.json` and
 `_toy_model_synthesized` (preamp → ROADM Z → trx Z), and the three synthesis fixtures that used
 bare-`trx` OMS endpoints (`_toy_model_synthesized`, `test_compute_qot._toy_model`,

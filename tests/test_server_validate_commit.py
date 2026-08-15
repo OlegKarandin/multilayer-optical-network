@@ -3,11 +3,8 @@ from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.model.assets import FiberType
 from multilayer_optical_mcp.model.ip_assets import Router, Service
 from multilayer_optical_mcp.model.qot import QoTState
-from tests.phase7_topology import add_bidir_span
-
-
-def _call(app, name, **kwargs):
-    return app._tool_manager._tools[name].fn(**kwargs)
+from multilayer_optical_mcp.testing import add_bidir_span
+from tests.conftest import call_tool
 
 
 def _seed(app):
@@ -24,7 +21,7 @@ def _seed(app):
 def test_provision_tool_adds_lightpath_and_binds_link():
     app = build_app()
     n = _seed(app)
-    out = _call(app, "provision_lightpath",
+    out = call_tool(app, "provision_lightpath",
                 lightpath={"id": "lp1", "oms_sequence": ["omsAB"],
                            "mode_id": n.modes.list()[0].id,
                            "center_freq_hz": 193.4e12},
@@ -38,11 +35,11 @@ def test_teardown_tool_removes_lightpath():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
-    out = _call(app, "teardown_lightpath", lightpath_id="lp1")
+    out = call_tool(app, "teardown_lightpath", lightpath_id="lp1")
     assert out["torn_down"] == "lp1"
     assert "lp1" not in app._snapshots.current()._lightpaths
 
@@ -52,13 +49,13 @@ def test_set_modulation_format_tool_changes_mode_and_capacity():
     n = _seed(app)
     modes = n.modes.list()
     hi, lo = modes[0].id, modes[-1].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": hi,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
     app._snapshots.current().set_qot_state(
         "lp1", QoTState(gsnr_db=20.0, osnr_db=30.0, margin_db=5.0))
-    out = _call(app, "set_modulation_format", lightpath_id="lp1", mode_id=lo)
+    out = call_tool(app, "set_modulation_format", lightpath_id="lp1", mode_id=lo)
     assert out["mode_id"] == lo
     assert app._snapshots.current().get_lightpath("lp1").mode_id == lo
 
@@ -73,7 +70,7 @@ def test_set_modulation_format_does_not_block_on_its_own_link_overload():
     n = _seed(app)
     modes = sorted(n.modes.list(), key=lambda m: m.bitrate_gbps)
     lo, hi = modes[0], modes[-1]
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": hi.id,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
@@ -81,7 +78,7 @@ def test_set_modulation_format_does_not_block_on_its_own_link_overload():
                           demand_gbps=lo.bitrate_gbps + 50.0,
                           working_path=("ip1",)))
 
-    out = _call(app, "set_modulation_format", lightpath_id="lp1", mode_id=lo.id)
+    out = call_tool(app, "set_modulation_format", lightpath_id="lp1", mode_id=lo.id)
 
     assert "ok" not in out, f"expected success, got a rejection: {out}"
     assert out["mode_id"] == lo.id
@@ -99,11 +96,11 @@ def test_teardown_lightpath_blocks_on_collateral_protection_not_viable():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp2", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.5e12},
           ip_link={"id": "ip2", "a_router": "rA", "z_router": "rB"})
@@ -111,7 +108,7 @@ def test_teardown_lightpath_blocks_on_collateral_protection_not_viable():
                           demand_gbps=10.0, working_path=("ip1",),
                           protection_path=("ip2",)))
 
-    out = _call(app, "teardown_lightpath", lightpath_id="lp2")
+    out = call_tool(app, "teardown_lightpath", lightpath_id="lp2")
 
     assert out.get("ok") is False, f"expected a collateral-damage rejection, got {out}"
     assert any(v["type"] == "protection_not_viable" for v in out["violations"])
@@ -131,14 +128,14 @@ def test_teardown_lightpath_does_not_block_on_its_own_dropped_traffic():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
     n.add_service(Service(id="svc1", src_router="rA", dst_router="rB",
                           demand_gbps=10.0, working_path=("ip1",)))
 
-    out = _call(app, "teardown_lightpath", lightpath_id="lp1")
+    out = call_tool(app, "teardown_lightpath", lightpath_id="lp1")
 
     assert out["torn_down"] == "lp1"
     assert out["affected_services"][0]["service_id"] == "svc1"
@@ -149,11 +146,11 @@ def test_validate_plan_tool_returns_typed_report():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
-    out = _call(app, "validate_plan", plan={"ops": []})
+    out = call_tool(app, "validate_plan", plan={"ops": []})
     assert "violations" in out and "ok" in out and "num_states" in out
 
 
@@ -166,7 +163,7 @@ def test_commit_dry_run_tool_reports_diff_without_mutating():
          "lightpath": {"id": "lpX", "oms_sequence": ["omsAB"], "mode_id": mode,
                        "center_freq_hz": 193.4e12},
          "ip_link": {"id": "ipX", "a_router": "rA", "z_router": "rB"}}]}
-    out = _call(app, "commit_plan", plan=plan, dry_run=True)
+    out = call_tool(app, "commit_plan", plan=plan, dry_run=True)
     assert out["status"] == "dry_run"
     assert out["diff"]["lightpaths"]["added"] == ["lpX"]
     assert "lpX" not in app._snapshots.current()._lightpaths
@@ -181,14 +178,14 @@ def test_commit_live_requires_confirm_then_reconcile_in_sync():
          "lightpath": {"id": "lpX", "oms_sequence": ["omsAB"], "mode_id": mode,
                        "center_freq_hz": 193.4e12},
          "ip_link": {"id": "ipX", "a_router": "rA", "z_router": "rB"}}]}
-    pending = _call(app, "commit_plan", plan=plan, dry_run=False, confirm=False)
+    pending = call_tool(app, "commit_plan", plan=plan, dry_run=False, confirm=False)
     assert pending["status"] == "requires_approval"
 
-    done = _call(app, "commit_plan", plan=plan, dry_run=False, confirm=True)
+    done = call_tool(app, "commit_plan", plan=plan, dry_run=False, confirm=True)
     assert done["status"] == "committed"
     assert "lpX" in app._snapshots.current()._lightpaths
 
-    drift = _call(app, "reconcile", intended_snapshot_id=done["intended_snapshot_id"])
+    drift = call_tool(app, "reconcile", intended_snapshot_id=done["intended_snapshot_id"])
     assert drift["in_sync"] is True
     assert drift["drift"] == []
 
@@ -203,7 +200,7 @@ def test_validate_plan_tool_never_raises_on_bad_reference():
                          "lightpath": {"id": "lpX", "oms_sequence": ["oms-ghost"],
                                        "mode_id": "no-such-mode",
                                        "center_freq_hz": 193.4e12}}]}
-    out = _call(app, "validate_plan", plan=bad_plan)   # must not raise
+    out = call_tool(app, "validate_plan", plan=bad_plan)   # must not raise
     assert out["ok"] is False
     assert any(v["type"] == "invalid_plan" for v in out["violations"])
 
@@ -215,7 +212,7 @@ def test_validate_plan_tool_never_raises_on_malformed_json():
     _seed(app)
     malformed = {"ops": [{"op": "provision_lightpath",
                           "lightpath": {"id": "lpX"}}]}   # missing oms_sequence etc.
-    out = _call(app, "validate_plan", plan=malformed)   # must not raise
+    out = call_tool(app, "validate_plan", plan=malformed)   # must not raise
     assert out["ok"] is False
     assert any(v["type"] == "invalid_plan" for v in out["violations"])
     # A real PlanError's message must be byte-for-byte unchanged -- no
@@ -232,7 +229,7 @@ def test_commit_plan_tool_never_raises_on_malformed_json():
     _seed(app)
     malformed = {"ops": [{"op": "provision_lightpath",
                           "lightpath": {"id": "lpX"}}]}
-    out = _call(app, "commit_plan", plan=malformed, dry_run=True)   # must not raise
+    out = call_tool(app, "commit_plan", plan=malformed, dry_run=True)   # must not raise
     assert out["status"] == "rejected"
     # Same PlanError-path-unchanged guarantee as validate_plan above.
     assert not out["diff"]["error"].startswith("unexpected internal error")
@@ -256,7 +253,7 @@ def test_validate_plan_tool_labels_internal_error_distinctly(monkeypatch):
     plan = {"ops": [{"op": "provision_lightpath",
                      "lightpath": {"id": "lp1", "oms_sequence": ["omsAB"],
                                    "mode_id": "m1", "center_freq_hz": 193.4e12}}]}
-    out = _call(app, "validate_plan", plan=plan)   # must not raise
+    out = call_tool(app, "validate_plan", plan=plan)   # must not raise
     assert out["ok"] is False
     assert out["violations"][0]["type"] == "invalid_plan"
     assert out["violations"][0]["message"].startswith("unexpected internal error")
@@ -272,7 +269,7 @@ def test_provision_lightpath_tool_labels_internal_error_distinctly(monkeypatch):
     monkeypatch.setattr("multilayer_optical_mcp.model.validate.validate_plan", _boom)
     app = build_app()
     n = _seed(app)
-    out = _call(app, "provision_lightpath",
+    out = call_tool(app, "provision_lightpath",
                 lightpath={"id": "lp1", "oms_sequence": ["omsAB"],
                            "mode_id": n.modes.list()[0].id,
                            "center_freq_hz": 193.4e12},
@@ -296,7 +293,7 @@ def test_commit_plan_tool_labels_internal_error_distinctly(monkeypatch):
     plan = {"ops": [{"op": "provision_lightpath",
                      "lightpath": {"id": "lp1", "oms_sequence": ["omsAB"],
                                    "mode_id": "m1", "center_freq_hz": 193.4e12}}]}
-    out = _call(app, "commit_plan", plan=plan, dry_run=True)   # must not raise
+    out = call_tool(app, "commit_plan", plan=plan, dry_run=True)   # must not raise
     assert out["status"] == "rejected"
     assert out["diff"]["error"].startswith("unexpected internal error")
 
@@ -308,7 +305,7 @@ def test_provision_lightpath_tool_seeds_qot_so_solvers_do_not_crash():
     from multilayer_optical_mcp.model.multilayer_graph import build_layered_graph
     app = build_app()
     _seed(app)
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"],
                      "mode_id": app._snapshots.current().modes.list()[0].id,
                      "center_freq_hz": 193.4e12},
@@ -328,13 +325,13 @@ def test_provision_lightpath_tool_rejects_spectrum_clash():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
     before_ids = {lp.id for lp in app._snapshots.current().list_lightpaths()}
 
-    out = _call(app, "provision_lightpath",
+    out = call_tool(app, "provision_lightpath",
                 lightpath={"id": "lp2", "oms_sequence": ["omsAB"], "mode_id": mode,
                            "center_freq_hz": 193.4e12})
 
@@ -352,12 +349,12 @@ def test_provision_lightpath_tool_allows_non_clashing_frequency():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
 
-    out = _call(app, "provision_lightpath",
+    out = call_tool(app, "provision_lightpath",
                 lightpath={"id": "lp2", "oms_sequence": ["omsAB"], "mode_id": mode,
                            "center_freq_hz": 193.5e12})   # slot 21, not slot 20
 
@@ -379,7 +376,7 @@ def test_provision_lightpath_tool_rejects_off_grid_frequency():
     mode = n.modes.list()[0].id
     before_ids = {lp.id for lp in app._snapshots.current().list_lightpaths()}
 
-    out = _call(app, "provision_lightpath",
+    out = call_tool(app, "provision_lightpath",
                 lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                            "center_freq_hz": 210e12},   # far outside the 48-slot grid
                 ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
@@ -402,12 +399,12 @@ def test_set_modulation_format_tool_recomputes_qot():
     n = _seed(app)
     modes = n.modes.list()
     hi, lo = modes[0].id, modes[-1].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": hi,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
 
-    out = _call(app, "set_modulation_format", lightpath_id="lp1", mode_id=lo)
+    out = call_tool(app, "set_modulation_format", lightpath_id="lp1", mode_id=lo)
 
     assert out["mode_id"] == lo
     assert isinstance(out["gsnr_db"], float)
@@ -431,7 +428,7 @@ def test_mode_feasibility_warning_fires_on_negative_margin():
     mode = n.modes.list()[0].id   # 300G@4.8dB: the least-demanding mode
     n.apply_loss_delta("f_omsAB", 25.0)   # blows the ~18.3 dB nominal budget
 
-    out = _call(app, "provision_lightpath",
+    out = call_tool(app, "provision_lightpath",
                 lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                            "center_freq_hz": 193.4e12},
                 ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
@@ -451,7 +448,7 @@ def test_provision_lightpath_tool_warnings_empty_list_when_healthy():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    out = _call(app, "provision_lightpath",
+    out = call_tool(app, "provision_lightpath",
                 lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                            "center_freq_hz": 193.4e12},
                 ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
@@ -472,14 +469,14 @@ def test_teardown_lightpath_reports_affected_services_before_mutation():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
     n.add_service(Service(id="svc1", src_router="rA", dst_router="rB",
                           demand_gbps=123.0, working_path=("ip1",)))
 
-    out = _call(app, "teardown_lightpath", lightpath_id="lp1")
+    out = call_tool(app, "teardown_lightpath", lightpath_id="lp1")
 
     assert out["torn_down"] == "lp1"
     assert out["affected_services"] == [
@@ -493,12 +490,12 @@ def test_teardown_lightpath_reports_empty_when_nothing_rides_it():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
 
-    out = _call(app, "teardown_lightpath", lightpath_id="lp1")
+    out = call_tool(app, "teardown_lightpath", lightpath_id="lp1")
 
     assert out["torn_down"] == "lp1"
     assert out["affected_services"] == []
@@ -512,14 +509,14 @@ def test_reroute_service_tool_warns_on_ip_overload():
     app = build_app()
     n = _seed(app)
     lo_mode = n.modes.list()[0].id   # 300G@4.8dB
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": lo_mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
     n.set_qot_state("lp1", QoTState(gsnr_db=20.0, osnr_db=30.0, margin_db=5.0))
     n.add_service(Service(id="svcA", src_router="rA", dst_router="rB", demand_gbps=500.0))
 
-    out = _call(app, "reroute_service", service_id="svcA", ip_path=["ip1"], which="working")
+    out = call_tool(app, "reroute_service", service_id="svcA", ip_path=["ip1"], which="working")
 
     assert out["working_path"] == ["ip1"]
     assert len(out["warnings"]) == 1
@@ -545,7 +542,7 @@ def test_reroute_service_tool_warns_on_disjointness_collapse():
         ("lpAC", "omsAC", "rA", "rC"),
         ("lpCB", "omsCB", "rC", "rB"),
     ]:
-        _call(app, "provision_lightpath",
+        call_tool(app, "provision_lightpath",
               lightpath={"id": lp_id, "oms_sequence": [oms], "mode_id": mode,
                          "center_freq_hz": 193.4e12},
               ip_link={"id": f"ip_{lp_id}", "a_router": a_router, "z_router": z_router})
@@ -556,7 +553,7 @@ def test_reroute_service_tool_warns_on_disjointness_collapse():
                           working_path=("ip_lpDirect",),
                           protection_path=("ip_lpAC", "ip_lpCB")))
 
-    out = _call(app, "reroute_service", service_id="svcP",
+    out = call_tool(app, "reroute_service", service_id="svcP",
                 ip_path=["ip_lpAC", "ip_lpCB"], which="working")
 
     assert out["working_path"] == ["ip_lpAC", "ip_lpCB"]
@@ -572,14 +569,14 @@ def test_reroute_service_tool_no_disjointness_warning_with_single_leg():
     app = build_app()
     n = _seed(app)
     mode = n.modes.list()[0].id
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
     n.set_qot_state("lp1", QoTState(gsnr_db=20.0, osnr_db=30.0, margin_db=5.0))
     n.add_service(Service(id="svcS", src_router="rA", dst_router="rB", demand_gbps=50.0))
 
-    out = _call(app, "reroute_service", service_id="svcS", ip_path=["ip1"], which="working")
+    out = call_tool(app, "reroute_service", service_id="svcS", ip_path=["ip1"], which="working")
 
     assert out["working_path"] == ["ip1"]
     assert out["warnings"] == []
@@ -599,7 +596,7 @@ def test_reroute_service_tool_no_disjointness_warning_when_still_disjoint():
         ("lpAC", "omsAC", "rA", "rC"),
         ("lpCB", "omsCB", "rC", "rB"),
     ]:
-        _call(app, "provision_lightpath",
+        call_tool(app, "provision_lightpath",
               lightpath={"id": lp_id, "oms_sequence": [oms], "mode_id": mode,
                          "center_freq_hz": 193.4e12},
               ip_link={"id": f"ip_{lp_id}", "a_router": a_router, "z_router": z_router})
@@ -608,7 +605,7 @@ def test_reroute_service_tool_no_disjointness_warning_when_still_disjoint():
     n.add_service(Service(id="svcQ", src_router="rA", dst_router="rB", demand_gbps=50.0,
                           working_path=("ip_lpDirect",)))
 
-    out = _call(app, "reroute_service", service_id="svcQ",
+    out = call_tool(app, "reroute_service", service_id="svcQ",
                 ip_path=["ip_lpAC", "ip_lpCB"], which="protection")
 
     assert out["protection_path"] == ["ip_lpAC", "ip_lpCB"]
@@ -633,7 +630,7 @@ def test_reroute_service_tool_warns_on_protection_reservation_oversubscription()
     app = build_app()
     n = _seed(app)
     lo_mode = n.modes.list()[0].id   # 300G@4.8dB
-    _call(app, "provision_lightpath",
+    call_tool(app, "provision_lightpath",
           lightpath={"id": "lp1", "oms_sequence": ["omsAB"], "mode_id": lo_mode,
                      "center_freq_hz": 193.4e12},
           ip_link={"id": "ip1", "a_router": "rA", "z_router": "rB"})
@@ -644,10 +641,10 @@ def test_reroute_service_tool_warns_on_protection_reservation_oversubscription()
     n.add_service(Service(id="svcB", src_router="rA", dst_router="rB", demand_gbps=150.0))
 
     # Sanity: plain working-only load alone does not exceed capacity.
-    assert _call(app, "reroute_service", service_id="svcA", ip_path=["ip1"],
+    assert call_tool(app, "reroute_service", service_id="svcA", ip_path=["ip1"],
                  which="working")["warnings"] == []
 
-    out = _call(app, "reroute_service", service_id="svcB", ip_path=["ip1"],
+    out = call_tool(app, "reroute_service", service_id="svcB", ip_path=["ip1"],
                 which="protection")
 
     assert out["protection_path"] == ["ip1"]

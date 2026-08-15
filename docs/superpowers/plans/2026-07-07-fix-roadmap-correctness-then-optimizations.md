@@ -1,7 +1,7 @@
 # Fix Plan — inspection-roadmap findings, correctness first, then optimizations, then Phase 7
 
 > **For agentic workers:** this is the **master triage/ordering plan**. Each batch below is
-> executed as its own repo-convention TDD implementation plan in `docs/plans/` (like the
+> executed as its own repo-convention TDD implementation plan in `docs/superpowers/plans/` (like the
 > existing phase plans), via superpowers:subagent-driven-development or
 > superpowers:executing-plans. The per-finding ACTION text in `docs/inspection-roadmap.md`
 > is the spec for each item.
@@ -13,7 +13,7 @@
 `gnpy==2.11.1` pin, `whatif.py:39` concat, unguarded `ip_link_capacity_gbps` in
 `ip_routing.py:102`, `_synthetic_trx`/`_optical_nodes` all still present) records ~60 findings
 across 8 stages. **None are fixed yet.** Phase 7 (validate/commit/reconcile,
-`docs/plans/2026-06-07-phase-7-validate-commit-reconcile.md`) is **not implemented** and its
+`docs/superpowers/plans/2026-06-07-phase-7-validate-commit-reconcile.md`) is **not implemented** and its
 validator replays plans through `recompute_qot_under_loading` + `simulate_ip_routing` — the two
 call paths carrying the highest-severity bugs. Building Phase 7 on them would certify wrong physics.
 
@@ -137,7 +137,7 @@ Order within batch is the roadmap's value÷risk order; each step independently s
    one `Fiber` per registered `FiberType` (dispersion/effective_area/pmd); importer registers a
    `FiberType` per distinct `fiber_type`. `FiberType.gamma` (dead) renamed to `effective_area`.
 2. ✅ **S3-11 drop the `_synthetic_trx` branch (fixes S3-4 for free) [Medium]** — DONE **via
-   Option B** (plan `docs/plans/2026-07-10-s3-11-symmetrize-toy-drop-synthetic-trx.md`).
+   Option B** (plan `docs/superpowers/plans/2026-07-10-s3-11-symmetrize-toy-drop-synthetic-trx.md`).
    Symmetrized the toy (drop `ROADM Z`), migrated the 3 synthesis fixtures to the importer
    convention, and `_resolve_endpoint` now raises on an unresolvable endpoint. Option A (keep the
    toy asymmetric via a line-terminal transceiver) was empirically GSNR-neutral but rejected on
@@ -271,7 +271,7 @@ is saturated) and document the choice.
 
 > **STATUS (2026-07-11): landed on branch `batch-d-docs-and-pinning-tests`.** Nine
 > commits total — eight docs-only (one per file/finding-group) plus the S2-1 pinning
-> test — executed via `docs/plans/2026-07-10-batch-d-docs-and-pinning-tests.md` under
+> test — executed via `docs/superpowers/plans/2026-07-10-batch-d-docs-and-pinning-tests.md` under
 > superpowers:subagent-driven-development (fresh implementer + task reviewer per task, all
 > nine reviews clean on first pass, plus a clean final whole-branch review). No production
 > logic changed anywhere in the batch —
@@ -309,7 +309,7 @@ One PR of docstrings + tests locking in invariants (roadmap ACTIONs verbatim):
 
 ## PART 4 — PHASE 7 (last)
 
-Execute `docs/plans/2026-06-07-phase-7-validate-commit-reconcile.md` as written, with these
+Execute `docs/superpowers/plans/2026-06-07-phase-7-validate-commit-reconcile.md` as written, with these
 adjustments accumulated from the fix batches (update the plan doc before starting):
 1. **Task 1 partially pre-done** — `NetworkModel.clone()` exists from C3-1; keep the
    `diff_models` + `SnapshotStore.put` steps. `clone()` must respect the C3 freeze mechanics

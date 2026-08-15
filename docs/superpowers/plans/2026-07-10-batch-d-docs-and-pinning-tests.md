@@ -5,7 +5,7 @@
 > use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Land Part 3 ("Batch D") of
-`docs/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md`: lock in the
+`docs/superpowers/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md`: lock in the
 remaining `docs/inspection-roadmap.md` findings that are documentation-only (no behavior
 change) as docstrings/comments at their exact code sites, plus the one real pinning test
 (S2-1). Parts 1 and 2 of that master plan (all correctness + optimization batches, C1–C9,
@@ -1047,14 +1047,14 @@ Batch D is documentation-only.
 
 - [ ] **Step 2: Update the master plan's Batch D status**
 
-In `docs/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md`, add a `STATUS`
+In `docs/superpowers/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md`, add a `STATUS`
 note under "PART 3 — DOCUMENTATION & PINNING-TEST BATCH (Batch D)" recording it landed,
 following the style of the existing `STATUS (2026-07-10): ...` notes on Batches C7–C9/O1–O3.
 
 - [ ] **Step 3: Commit the status update**
 
 ```bash
-git add docs/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md
+git add docs/superpowers/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md
 git commit -m "$(cat <<'EOF'
 docs(plan): mark Batch D landed (documentation + S2-1 pinning test)
 EOF

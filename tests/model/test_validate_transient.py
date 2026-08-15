@@ -12,7 +12,7 @@ from multilayer_optical_mcp.model.plan import (
     Plan, ProvisionLightpath, RerouteService, TeardownLightpath,
 )
 from multilayer_optical_mcp.model.validate import validate_plan, ViolationType
-from tests.phase7_topology import new_model, add_bidir_span
+from multilayer_optical_mcp.testing import new_model, add_bidir_span
 
 
 def _two_path_model():

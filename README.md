@@ -60,12 +60,9 @@ pip install -e ".[dev]"
 ```
 
 The `dev` extra pulls in the `server` extra (`mcp[cli]`, `pydantic`) plus
-`pytest`, `pytest-cov`, and `ruff`. For an exact, reproducible pin set instead
-of the loose `pyproject.toml` ranges, use:
-
-```bash
-pip install -r requirements-dev.txt
-```
+`pytest`, `pytest-cov`, and `ruff`. `pyproject.toml` is the single source of
+truth for dependencies — there is no separate `requirements*.txt` to drift
+out of sync with it.
 
 ## Run
 
@@ -110,7 +107,7 @@ time. A handful of slow, real-GNPy ground-truth tests are skipped by default;
 opt in with:
 
 ```bash
-MOMCP_RUN_GNPY_E2E=1 pytest tests/
+OPTICAL_NET_RUN_GNPY_E2E=1 pytest tests/
 ```
 
 ## License

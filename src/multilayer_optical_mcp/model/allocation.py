@@ -54,8 +54,7 @@ class QotEvaluator(Protocol):
     ) -> QoTState: ...
 
 
-def make_adapter_evaluator(model, store, *, topo_path=None, eqpt_path=None,
-                           cache=None, harvest_cache=None) -> QotEvaluator:
+def make_adapter_evaluator(model, store, *, cache=None, harvest_cache=None) -> QotEvaluator:
     """A QotEvaluator bound to the real GNPy adapter + a results store. An optional
     `cache` (QoTCache) memoizes propagation across calls — content-addressed, so it
     is safe to share one cache across a whole solve/settle run.
@@ -66,12 +65,11 @@ def make_adapter_evaluator(model, store, *, topo_path=None, eqpt_path=None,
     carrier's GSNR, so the many probe-slot calls FillPolicy.FULL makes across a
     solve/settle run collapse into one propagation per (path, direction, mode,
     physical-fingerprint) instead of one per probe. Any non-full (subset/ACTUAL)
-    loading, or a topo/eqpt-file run (not model-fingerprintable), falls through to
-    today's per-call `compute_qot` path unchanged."""
+    loading falls through to today's per-call `compute_qot` path unchanged."""
     grid = SpectrumGrid.default()
 
     def _eval(*, oms_sequence, direction, mode_id, loading):
-        if harvest_cache is not None and topo_path is None and eqpt_path is None:
+        if harvest_cache is not None:
             try:
                 slots = {grid.slot_of(c.center_freq_hz) for c in loading.channels}
             except ValueError:
@@ -104,7 +102,7 @@ def make_adapter_evaluator(model, store, *, topo_path=None, eqpt_path=None,
         state, _ = compute_qot(
             model=model, store=store, oms_sequence=tuple(oms_sequence),
             direction=direction, mode_id=mode_id, loading=loading,
-            topo_path=topo_path, eqpt_path=eqpt_path, cache=cache,
+            cache=cache,
         )
         return state
     return _eval

@@ -4,7 +4,7 @@ from multilayer_optical_mcp.model.qot_results import QoTResultStore
 from multilayer_optical_mcp.model.snapshots import SnapshotStore
 from multilayer_optical_mcp.model.plan import Plan, ProvisionLightpath, TeardownLightpath
 from multilayer_optical_mcp.model.commit import commit_plan, reconcile
-from tests.phase7_topology import new_model, add_bidir_span
+from multilayer_optical_mcp.testing import new_model, add_bidir_span
 
 
 def _base():

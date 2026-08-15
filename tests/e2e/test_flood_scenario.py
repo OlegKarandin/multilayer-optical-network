@@ -10,14 +10,12 @@ real german_17 build gives protected services whose legs are physically
 disjoint but not vetted against any *risk group* -- exactly the gap a
 flood-zone risk group exposes.
 
-Opt-in real-adapter test: gated behind MOMCP_RUN_GNPY_E2E=1 via the shared
+Opt-in real-adapter test: gated behind OPTICAL_NET_RUN_GNPY_E2E=1 via the shared
 `german17_built` fixture (tests/e2e/conftest.py). Direct-Python-API
 convention throughout, except the explicit MCP-tool-layer check at the end
-(tests/test_server.py:35-47's `_call` pattern).
+(tests/conftest.py's `call_tool` helper).
 """
 from __future__ import annotations
-
-import asyncio
 
 from multilayer_optical_mcp.model import objective
 from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
@@ -37,6 +35,7 @@ from multilayer_optical_mcp.model.solvers import SolverStatus, check_disjointnes
 from multilayer_optical_mcp.model.validate import ViolationType, validate_plan
 from multilayer_optical_mcp.model.whatif import inject_failure
 from multilayer_optical_mcp.server import build_app
+from tests.conftest import call_tool
 
 
 # ---------------------------------------------------------------------------
@@ -72,16 +71,6 @@ def _pick_correlated_service(model) -> tuple[Service, frozenset[str]]:
         "no protected service with a fiber_/amp_ physical asset on both legs "
         "found in the built german_17 network"
     )
-
-
-def _tool(app, name, **kwargs):
-    """Invoke a real @app.tool() closure directly, sync or coroutine-aware --
-    mirrors tests/test_server.py:40-47's `_call` helper."""
-    tool = app._tool_manager._tools[name]
-    result = tool.fn(**kwargs)
-    if asyncio.iscoroutine(result):
-        return asyncio.run(result)
-    return result
 
 
 def _link_physical_span_ids(model, link_id: str) -> tuple[str, ...]:
@@ -416,12 +405,12 @@ def test_flood_zone_correlation_exposes_gap_and_remedy_lands(german17_built):
     mcp_snapshots = SnapshotStore(initial=mcp_model)
     app = build_app(model=mcp_model, snapshots=mcp_snapshots, results=QoTResultStore())
 
-    rg_dict = _tool(app, "define_risk_group", rg_id="flood-zone-1",
+    rg_dict = call_tool(app, "define_risk_group", rg_id="flood-zone-1",
                     asset_ids=list(flood_asset_ids))
     assert rg_dict["id"] == "flood-zone-1"
     assert tuple(sorted(rg_dict["asset_ids"])) == flood_asset_ids
 
-    exposure_dict = _tool(app, "get_exposure", service_id=svc.id,
+    exposure_dict = call_tool(app, "get_exposure", service_id=svc.id,
                           risk_group_id="flood-zone-1")
     assert exposure_dict["both_intersect"] == exposure.both_intersect
     assert exposure_dict["both_intersect"] is True
@@ -433,11 +422,11 @@ def test_flood_zone_correlation_exposes_gap_and_remedy_lands(german17_built):
     # asserted to match the model-layer dry-run/live statuses exactly.
     mcp_plan = {"ops": [_op_to_dict(op) for op in plan.ops]}
 
-    mcp_dry = _tool(app, "commit_plan", plan=mcp_plan, dry_run=True,
+    mcp_dry = call_tool(app, "commit_plan", plan=mcp_plan, dry_run=True,
                     basis="risk_group", level="link")
     assert mcp_dry["status"] == dry.status
 
-    mcp_live = _tool(app, "commit_plan", plan=mcp_plan, dry_run=False, confirm=True,
+    mcp_live = call_tool(app, "commit_plan", plan=mcp_plan, dry_run=False, confirm=True,
                      basis="risk_group", level="link")
     assert mcp_live["status"] == live.status
 
@@ -448,6 +437,6 @@ def test_flood_zone_correlation_exposes_gap_and_remedy_lands(german17_built):
     # to already exist. Re-applying the same protection path here is
     # idempotent and confirms the dedicated reroute_service tool is wired to
     # the same underlying mechanism and returns the same path.
-    reroute_dict = _tool(app, "reroute_service", service_id=svc.id,
+    reroute_dict = call_tool(app, "reroute_service", service_id=svc.id,
                          ip_path=list(new_ip_path), which="protection")
     assert reroute_dict["protection_path"] == list(new_ip_path)

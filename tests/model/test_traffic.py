@@ -8,9 +8,10 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from multilayer_optical_mcp.data import reference_topology
 from multilayer_optical_mcp.model.assets import ROADM, FiberType, Fiber, OMS
 from multilayer_optical_mcp.model.ip_assets import Router
-from multilayer_optical_mcp.model.modes import ModeRegistry, load_modulation_formats
+from multilayer_optical_mcp.model.modes import ModeRegistry, default_modes
 from multilayer_optical_mcp.model.network import NetworkModel
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 from multilayer_optical_mcp.model.traffic import generate_demands
@@ -116,9 +117,8 @@ def test_generate_demands_reproduces_frozen_german_17_fixture():
     byte-for-byte — the durable, GNPy-free replacement for hand-written demands."""
     fix = json.loads(
         (_REPO / "tests/fixtures/german_17_demands_seed0.json").read_text(encoding="utf-8"))
-    graph = json.loads(
-        (_REPO / "topologies/german_17.json").read_text(encoding="utf-8"))
-    modes = load_modulation_formats(_REPO / "modulation_formats.yaml")
+    graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))
+    modes = default_modes()
     model = model_from_abstract_graph(graph, modes=modes)
 
     got = generate_demands(model, seed=fix["seed"], scale=fix["scale"])

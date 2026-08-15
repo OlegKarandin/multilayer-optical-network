@@ -294,7 +294,7 @@ re-derived from source by a task reviewer, not just re-run):
 - **Regen-node transponder-inventory gating — ACCEPTED SIMPLIFICATION (decided
   2026-07-24, superseding the "CONFIRMED GAP" framing below).** Verification pass
   (2026-07-24) found it is simply not built: the `multilayer-graph-restoration` design doc
-  (`docs/plans/2026-06-14-multilayer-graph-restoration-design.md:73-75,164-166`, now
+  (`docs/superpowers/plans/2026-06-14-multilayer-graph-restoration-design.md:73-75,164-166`, now
   corrected) had promised regen-node transponder availability would be "checked at
   validate/commit (Phase 7)," but `validate_plan`/`commit_plan` (`model/validate.py`,
   `model/commit.py`) have no transponder/inventory/regen check at all — `ViolationType`'s
@@ -420,7 +420,7 @@ Now that `build_operating_network` produces a realistically-loaded network
 - `docs/service-level-routing-findings.md`'s gaps (flat-graph routing, no
   layered disjointness, missing `evaluate_objective`) — all resolved by the
   route_service/evaluate_objective merge (`ddc0fb4`).
-- Every `docs/plans/*.md` phase plan (1–2, 3, 4, 5, 6a, 6b, 7) — all shipped;
+- Every `docs/superpowers/plans/*.md` phase plan (1–2, 3, 4, 5, 6a, 6b, 7) — all shipped;
   their "out of scope" sections are permanent design exclusions (control-plane
   signalling, weather/geo, physical-layer optimization, research-novelty claims),
   not deferred work.

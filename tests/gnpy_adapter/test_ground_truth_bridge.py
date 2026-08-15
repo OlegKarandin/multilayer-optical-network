@@ -1,8 +1,8 @@
 """Gate: a model synthesized to match toy_2span must reproduce load_toy GSNR."""
 import json
 import math
-from pathlib import Path
 
+from multilayer_optical_mcp.data import reference_topology
 from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
 from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_mcp.model.assets import (
@@ -13,9 +13,11 @@ from multilayer_optical_mcp.model.network import NetworkModel
 from multilayer_optical_mcp.model.qot_results import QoTResultStore
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-TOY = REPO_ROOT / "topologies" / "toy_2span.json"
-GERMAN_17 = REPO_ROOT / "topologies" / "german_17.json"
+from tests.conftest import FIXTURES_DIR
+
+TOY = FIXTURES_DIR / "toy_2span.json"
+EQPT = FIXTURES_DIR / "eqpt" / "eqpt_config.json"
+GERMAN_17 = reference_topology("german_17")
 MODE = "400G@7.1dB"
 TOL_DB = 0.25
 
@@ -96,13 +98,13 @@ def _gsnr_synthesized() -> float:
 
 
 def _gsnr_legacy() -> float:
-    """GSNR from the file-loaded toy_2span.json via topo_path."""
+    """GSNR from the file-loaded toy_2span.json via topo_path/eqpt_path."""
     model = _toy_model_legacy()
     store = QoTResultStore()
     loading = LoadingState(channels=(Channel(193.4e12, 100e9, None, MODE),))
     state, _ = compute_qot(model=model, store=store, oms_sequence=("oms_leg",),
                            direction=Direction.FORWARD, mode_id=MODE, loading=loading,
-                           topo_path=TOY)
+                           topo_path=TOY, eqpt_path=EQPT)
     return state.gsnr_db
 
 

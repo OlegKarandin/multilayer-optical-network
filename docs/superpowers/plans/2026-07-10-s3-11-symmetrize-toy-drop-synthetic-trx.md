@@ -327,7 +327,7 @@ git commit -m "fix(synthesize): drop _synthetic_trx, raise on unresolvable OMS e
 
 **Files:**
 - Modify: `docs/inspection-roadmap.md` (Stage 3 point 11 + point 4 → RESOLVED)
-- Modify: `docs/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md` (Batch C7 status)
+- Modify: `docs/superpowers/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md` (Batch C7 status)
 
 - [ ] **Step 1: Mark S3-11 and S3-4 RESOLVED in `inspection-roadmap.md`.** Replace the
   "DEFERRED in Batch C7" note under Stage 3 point 11 with a "RESOLVED (Option B)" note recording:
@@ -342,7 +342,7 @@ git commit -m "fix(synthesize): drop _synthetic_trx, raise on unresolvable OMS e
 - [ ] **Step 3: Commit.**
 
 ```bash
-git add docs/inspection-roadmap.md docs/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md
+git add docs/inspection-roadmap.md docs/superpowers/plans/2026-07-07-fix-roadmap-correctness-then-optimizations.md
 git commit -m "docs: record S3-11 (Option B) resolution (Batch C7)"
 ```
 

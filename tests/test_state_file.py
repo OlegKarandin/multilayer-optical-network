@@ -4,14 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from multilayer_optical_mcp.gnpy_adapter.loading import LoadingState
-from multilayer_optical_mcp.model.assets import Direction, Lightpath
+from multilayer_optical_mcp.model.assets import Lightpath
 from multilayer_optical_mcp.model.ip_assets import IPLink, Service
 from multilayer_optical_mcp.model.ip_routing import simulate_ip_routing
-from multilayer_optical_mcp.model.modes import load_modulation_formats
+from multilayer_optical_mcp.model.modes import default_modes
 from multilayer_optical_mcp.model.objective import evaluate_objective
 from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.scenario import build_operating_network
 from multilayer_optical_mcp.model.snapshots import diff_models
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 from multilayer_optical_mcp.state_file import (
@@ -21,19 +19,7 @@ from multilayer_optical_mcp.state_file import (
     load_state,
     topology_fingerprint,
 )
-from multilayer_optical_mcp.topology_loader import MOD_FORMATS_YAML
-
-TOPOLOGY = {
-    "graph": {
-        "nodes": [{"id": "a"}, {"id": "b"}, {"id": "c"}],
-        "edges": [
-            {"src": "a", "dst": "b", "length_km": 80.0},
-            {"src": "b", "dst": "c", "length_km": 80.0},
-            {"src": "c", "dst": "a", "length_km": 80.0},
-        ],
-    },
-    "srlgs": [{"id": "srlg_ab", "asset_ids": ["roadm_a", "roadm_b"]}],
-}
+from multilayer_optical_mcp.testing import TOPOLOGY, _bare, _built
 
 
 def test_fingerprint_is_stable_and_prefixed():
@@ -75,7 +61,7 @@ def _model():
     tests the SERIALIZER, so the fixture must pin exact ids and field values
     the assertions can name. Task 3 adds the realistic packer-built round-trip.
     """
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     m = model_from_abstract_graph(TOPOLOGY["graph"], modes=modes)
     mode_id = m.modes.list()[0].id       # ModeRegistry.list(), not list_modes()
     m.add_lightpath(Lightpath(id="lp_1", oms_sequence=("oms_a_b",),
@@ -137,37 +123,6 @@ def test_dump_state_sorts_collections_but_not_paths():
     assert [lp["id"] for lp in doc["lightpaths"]] == ["lp_0", "lp_1"]
     # ...but the OMS sequence keeps its physical order, unsorted.
     assert doc["lightpaths"][0]["oms_sequence"] == ["oms_b_c", "oms_c_a"]
-
-
-class ConstQot:
-    """Route-agnostic high GSNR: any path clears the top mode's threshold."""
-    def __call__(self, *, oms_sequence, direction, mode_id, loading):
-        return QoTState(gsnr_db=16.0, osnr_db=30.0, margin_db=0.0)
-
-
-def _fake_settle(qot):
-    def _settle(work):
-        for lp in work.list_lightpaths():
-            work.set_qot_state(lp.id, qot(oms_sequence=lp.oms_sequence,
-                                          direction=Direction.FORWARD,
-                                          mode_id=lp.mode_id,
-                                          loading=LoadingState.empty()))
-    return _settle
-
-
-def _bare():
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
-    return model_from_abstract_graph(TOPOLOGY["graph"], modes=modes)
-
-
-def _built():
-    """A REAL packer-built operating network on the 3-node ring, GNPy-free."""
-    qot = ConstQot()
-    res = build_operating_network(_bare(), seed=0, qot=qot, target_mean_util=0.5,
-                                  max_util_cap=0.95, max_iters=6,
-                                  settle=_fake_settle(qot))
-    assert res.model.list_services(), "fixture must actually place something"
-    return res.model
 
 
 def _reload(built):
@@ -239,7 +194,7 @@ def topo_and_state(tmp_path: Path):
 
 def test_load_model_from_state_file_restores_the_services(topo_and_state):
     topo, state = topo_and_state
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     model = load_model_from_state_file(topo, state, modes=modes)
     assert model.list_services()
     assert model.list_ip_links()
@@ -252,7 +207,7 @@ def test_load_model_from_state_file_rejects_a_mismatched_topology(topo_and_state
     changed = json.loads(json.dumps(TOPOLOGY))
     changed["graph"]["edges"][0]["length_km"] = 999.0
     other.write_text(json.dumps(changed), encoding="utf-8")
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     with pytest.raises(StateFileError) as exc:
         load_model_from_state_file(other, state, modes=modes)
     assert "sha256:" in str(exc.value)
@@ -261,7 +216,7 @@ def test_load_model_from_state_file_rejects_a_mismatched_topology(topo_and_state
 def test_load_model_from_state_file_tolerates_utf8_bom(topo_and_state):
     topo, state = topo_and_state
     state.write_bytes(b"\xef\xbb\xbf" + state.read_bytes())
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     assert load_model_from_state_file(topo, state, modes=modes).list_services()
 
 
@@ -273,7 +228,7 @@ def test_load_model_from_state_file_warns_on_gnpy_version_mismatch(
     state.write_text(json.dumps(doc), encoding="utf-8")
     monkeypatch.setattr(
         "multilayer_optical_mcp.state_file.running_gnpy_version", lambda: "2.0.0")
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     load_model_from_state_file(topo, state, modes=modes)
     err = capsys.readouterr().err
     assert "1.0.0" in err and "2.0.0" in err
@@ -287,7 +242,7 @@ def test_load_model_from_state_file_does_not_warn_when_gnpy_version_matches(
     state.write_text(json.dumps(doc), encoding="utf-8")
     monkeypatch.setattr(
         "multilayer_optical_mcp.state_file.running_gnpy_version", lambda: "2.0.0")
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     load_model_from_state_file(topo, state, modes=modes)
     assert capsys.readouterr().err == ""
 
@@ -297,43 +252,6 @@ def test_load_model_from_state_file_does_not_warn_without_a_stored_gnpy_version(
     # Nothing in meta about gnpy_version at all (e.g. an older build) -- there
     # is nothing to compare, so no warning, not a crash.
     topo, state = topo_and_state
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     load_model_from_state_file(topo, state, modes=modes)
     assert capsys.readouterr().err == ""
-
-
-def test_server_main_rejects_state_without_topology(monkeypatch, capsys):
-    import sys
-    from multilayer_optical_mcp import server
-    monkeypatch.setattr(sys, "argv", ["multilayer-optical-mcp", "--state", "s.json"])
-    with pytest.raises(SystemExit) as exc:
-        server.main()
-    assert exc.value.code != 0
-    assert "--topology" in capsys.readouterr().err
-
-
-def test_server_main_reports_a_fingerprint_mismatch_without_a_traceback(
-        monkeypatch, tmp_path, capsys):
-    # The realistic real-world failure: topology got rebuilt, state file did
-    # not. main() must fail with a structured message, not a raw traceback.
-    import sys
-    from multilayer_optical_mcp import server
-
-    other = tmp_path / "other.json"
-    changed = json.loads(json.dumps(TOPOLOGY))
-    changed["graph"]["edges"][0]["length_km"] = 999.0
-    other.write_text(json.dumps(changed), encoding="utf-8")
-
-    state = tmp_path / "state.json"
-    doc = dump_state(_built(), fingerprint=topology_fingerprint(TOPOLOGY), meta={})
-    state.write_text(json.dumps(doc), encoding="utf-8")
-
-    monkeypatch.setattr(sys, "argv", [
-        "multilayer-optical-mcp", "--topology", str(other), "--state", str(state)])
-    with pytest.raises(SystemExit) as exc:
-        server.main()
-    assert exc.value.code != 0
-    err = capsys.readouterr().err
-    assert "sha256:" in err
-    assert str(other) in err and str(state) in err
-    assert "Traceback" not in err

@@ -6,14 +6,10 @@ from typing import Any, Tuple
 from ..model.optical_network import OpticalNetworkModel
 from .loading import LoadingState
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_EQPT = REPO_ROOT / "eqpt" / "eqpt_config.json"
-DEFAULT_TOPO = REPO_ROOT / "topologies" / "toy_2span.json"
-
 
 def load_toy(
-    eqpt_path: Path = DEFAULT_EQPT,
-    topo_path: Path = DEFAULT_TOPO,
+    eqpt_path: Path,
+    topo_path: Path,
 ) -> tuple[Any, Any]:
     from gnpy.tools.json_io import load_equipment, load_network, load_json
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11, NetworkX, pytest. Conda env `multilayer-optical-mcp` (run all commands via `conda run -n multilayer-optical-mcp ...`, or the env python at `C:/Users/olegk/miniconda3/envs/multilayer-optical-mcp/python.exe`).
 
-**Design doc:** `docs/plans/2026-06-14-multilayer-graph-restoration-design.md`
+**Design doc:** `docs/superpowers/plans/2026-06-14-multilayer-graph-restoration-design.md`
 
 **Conventions baked in (do not re-derive):**
 - `Router.site` is the optical-node id (e.g. `Router(id="R1", site="A")` routes from optical node `"A"`).

@@ -1,4 +1,6 @@
 from __future__ import annotations
+import functools
+import importlib.resources
 from pathlib import Path
 from typing import Iterable, Tuple
 import yaml
@@ -47,3 +49,15 @@ def load_modulation_formats(yaml_path: Path) -> ModeRegistry:
             roll_off=roll_off,
         ))
     return ModeRegistry(modes)
+
+
+@functools.cache
+def default_modes() -> ModeRegistry:
+    """The packaged modulation formats, parsed once and shared."""
+    yaml_path = (
+        importlib.resources.files("multilayer_optical_mcp")
+        / "data"
+        / "modulation_formats.yaml"
+    )
+    with importlib.resources.as_file(yaml_path) as p:
+        return load_modulation_formats(p)

@@ -1,24 +1,15 @@
-"""Phase 4 server tools: routing + disjointness solvers, end-to-end through
-the FastMCP app. Mirrors test_server_phase3.py."""
+"""Routing + disjointness solver server tools, end-to-end through the FastMCP
+app. Mirrors test_server_read_tools.py."""
 from __future__ import annotations
-
-import asyncio
 
 from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath
 from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
+from tests.conftest import call_tool
 
 
 def _tool_names(app) -> set[str]:
     return set(app._tool_manager._tools.keys())
-
-
-def _call(app, name: str, **kwargs):
-    tool = app._tool_manager._tools[name]
-    result = tool.fn(**kwargs)
-    if asyncio.iscoroutine(result):
-        return asyncio.run(result)
-    return result
 
 
 def _seed_app():
@@ -53,7 +44,7 @@ def test_server_registers_phase_4_tools():
 
 def test_compute_paths_tool_returns_both_routes():
     app = _seed_app()
-    out = _call(app, "compute_paths", src="A", dst="B", k=2)
+    out = call_tool(app, "compute_paths", src="A", dst="B", k=2)
     assert out["status"] == "solution"
     found = {tuple(p["oms_sequence"]) for p in out["paths"]}
     assert found == {("oms-north",), ("oms-south",)}
@@ -61,7 +52,7 @@ def test_compute_paths_tool_returns_both_routes():
 
 def test_compute_paths_tool_no_solution():
     app = _seed_app()
-    out = _call(app, "compute_paths", src="A", dst="nowhere", k=2)
+    out = call_tool(app, "compute_paths", src="A", dst="nowhere", k=2)
     assert out["status"] == "no_solution"
     assert out["paths"] == []
 
@@ -73,7 +64,7 @@ def test_compute_paths_tool_rejects_k_below_one():
     boundary instead of overloading NO_SOLUTION's meaning. Returns a typed
     error (matching the snapshot_* tools' convention) instead of raising."""
     app = _seed_app()
-    out = _call(app, "compute_paths", src="A", dst="B", k=0)
+    out = call_tool(app, "compute_paths", src="A", dst="B", k=0)
     assert "error" in out
     assert out["k"] == 0
 
@@ -82,12 +73,12 @@ def test_check_disjointness_tool_risk_group_catch():
     """Same pair, physically disjoint but caught under a freshly-injected
     risk group spanning both spans."""
     app = _seed_app()
-    _call(app, "define_risk_group", rg_id="rg-storm",
+    call_tool(app, "define_risk_group", rg_id="rg-storm",
           asset_ids=["fiber-north", "fiber-south"], metadata={})
-    phys = _call(app, "check_disjointness", path_a=["oms-north"],
+    phys = call_tool(app, "check_disjointness", path_a=["oms-north"],
                  path_b=["oms-south"], basis="physical", level="link")
     assert phys["disjoint"] is True
-    rg = _call(app, "check_disjointness", path_a=["oms-north"],
+    rg = call_tool(app, "check_disjointness", path_a=["oms-north"],
                path_b=["oms-south"], basis="risk_group", level="risk_group")
     assert rg["disjoint"] is False
     assert rg["shared_groups"] == ["rg-storm"]
@@ -95,17 +86,17 @@ def test_check_disjointness_tool_risk_group_catch():
 
 def test_compute_disjoint_paths_tool_solution_and_best_effort():
     app = _seed_app()
-    sol = _call(app, "compute_disjoint_paths", src="A", dst="B",
+    sol = call_tool(app, "compute_disjoint_paths", src="A", dst="B",
                 basis="physical", level="link", best_effort=False)
     assert sol["status"] == "solution"
     assert sol["disjoint"] is True
 
-    _call(app, "define_risk_group", rg_id="rg-storm",
+    call_tool(app, "define_risk_group", rg_id="rg-storm",
           asset_ids=["fiber-north", "fiber-south"], metadata={})
-    none = _call(app, "compute_disjoint_paths", src="A", dst="B",
+    none = call_tool(app, "compute_disjoint_paths", src="A", dst="B",
                  basis="risk_group", level="risk_group", best_effort=False)
     assert none["status"] == "no_solution"
-    partial = _call(app, "compute_disjoint_paths", src="A", dst="B",
+    partial = call_tool(app, "compute_disjoint_paths", src="A", dst="B",
                     basis="risk_group", level="risk_group", best_effort=True)
     assert partial["status"] == "partial"
     assert partial["shared_groups"] == ["rg-storm"]

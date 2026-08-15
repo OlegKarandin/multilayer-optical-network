@@ -15,7 +15,7 @@ from dataclasses import asdict
 from mcp.server import MCPServer
 
 from .model.assets import Direction
-from .model.modes import load_modulation_formats
+from .model.modes import default_modes
 from .model.network import NetworkModel
 from .model.qot_results import QoTResultStore, HarvestCache
 from .model.snapshots import SnapshotStore
@@ -26,7 +26,6 @@ from .gnpy_adapter.adapter import (
     recompute_qot_under_loading as _recompute,
     unattributed_channel_freqs_hz as _unattributed_channel_freqs_hz,
 )
-from .topology_loader import MOD_FORMATS_YAML  # noqa: F401  (re-export; imported by tests and callers)
 
 
 def build_app(*, model: NetworkModel | None = None,
@@ -34,7 +33,7 @@ def build_app(*, model: NetworkModel | None = None,
               results: QoTResultStore | None = None) -> MCPServer:
     """Construct and return the MCPServer application with all phase 1-2 tools."""
     app = MCPServer("multilayer-optical-mcp")
-    modes = load_modulation_formats(MOD_FORMATS_YAML)
+    modes = default_modes()
     if snapshots is None:
         snapshots = SnapshotStore(initial=model or NetworkModel(modes=modes),
                                    max_snapshots=64, ttl_seconds=3600)
@@ -1115,7 +1114,7 @@ def main() -> None:
 
     model = None
     if args.topology:
-        modes = load_modulation_formats(MOD_FORMATS_YAML)
+        modes = default_modes()
         try:
             if args.state:
                 model = load_model_from_state_file(args.topology, args.state, modes=modes)
