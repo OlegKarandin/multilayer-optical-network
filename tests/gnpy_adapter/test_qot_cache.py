@@ -11,7 +11,7 @@ from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
 from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_mcp.model.assets import Direction
 from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
-from tests.phase7_topology import new_model, add_bidir_span
+from multilayer_optical_mcp.testing import new_model, add_bidir_span
 
 _FREQ = 193.4e12
 

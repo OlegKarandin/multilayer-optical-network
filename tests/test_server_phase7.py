@@ -3,7 +3,7 @@ from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.model.assets import FiberType
 from multilayer_optical_mcp.model.ip_assets import Router, Service
 from multilayer_optical_mcp.model.qot import QoTState
-from tests.phase7_topology import add_bidir_span
+from multilayer_optical_mcp.testing import add_bidir_span
 
 
 def _call(app, name, **kwargs):

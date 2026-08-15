@@ -10,7 +10,7 @@ from multilayer_optical_mcp.model.plan import (
 from multilayer_optical_mcp.model.commit import commit_plan
 from multilayer_optical_mcp.model.validate import recompute_if_possible
 from multilayer_optical_mcp.model.objective import evaluate_objective
-from tests.phase7_topology import new_model, add_bidir_span
+from multilayer_optical_mcp.testing import new_model, add_bidir_span
 
 
 def _base():

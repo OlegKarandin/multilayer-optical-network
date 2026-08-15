@@ -15,7 +15,7 @@ from multilayer_optical_mcp.model.validate import (
     _mode_infeasible_findings, _protection_viability_findings,
     _disjointness_findings, _protection_oversubscription_findings,
 )
-from tests.phase7_topology import new_model, add_bidir_span
+from multilayer_optical_mcp.testing import new_model, add_bidir_span
 
 
 def _ip_over_optical(margin_db=2.0, demand=300.0):
