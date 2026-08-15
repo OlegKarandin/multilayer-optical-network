@@ -1,0 +1,1948 @@
+{
+  "format_version": 1,
+  "meta": {
+    "topology_path": "src/multilayer_optical_network/data/german_17.json",
+    "gnpy_version": "2.14.0",
+    "built_at": "2026-08-15T13:47:50.907979+00:00",
+    "params": {
+      "seed": 0,
+      "target_mean_util": 0.4,
+      "max_util_cap": 0.95,
+      "pair_density": null,
+      "unit_gbps": 100.0,
+      "protected_fraction": 0.3,
+      "max_iters": 10,
+      "protection_constraints": null
+    },
+    "report": {
+      "status": "partial",
+      "achieved_mean_util": 0.36944444444444446,
+      "achieved_max_util": 0.875,
+      "n_demands": 88,
+      "transponders_used": 90,
+      "unplaced_count": 0,
+      "unplaced_reasons": {},
+      "scale": 12800.0,
+      "limit": "max_util_cap"
+    },
+    "topology_fingerprint": "sha256:8567883dc35a724a88e4928dddb922b2a8e6c1d0b4c1765bbc4c5ae973f71c6e"
+  },
+  "lightpaths": [
+    {
+      "id": "lp-cand-d0000-0",
+      "oms_sequence": [
+        "oms_0_1"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.205640024150373,
+        "osnr_db": 19.27072359053515,
+        "margin_db": 4.105640024150373,
+        "limiting_element_id": "amp_0_1_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0001-0",
+      "oms_sequence": [
+        "oms_0_1",
+        "oms_1_7"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 17.58531660178167,
+        "osnr_db": 17.682068900322733,
+        "margin_db": 2.485316601781671,
+        "limiting_element_id": "amp_1_7_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0002-0",
+      "oms_sequence": [
+        "oms_1_0"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.211471834163714,
+        "osnr_db": 19.270733151578476,
+        "margin_db": 4.111471834163714,
+        "limiting_element_id": "amp_1_0_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0003-0",
+      "oms_sequence": [
+        "oms_1_6"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.62699446800248,
+        "osnr_db": 19.687365390310664,
+        "margin_db": 4.52699446800248,
+        "limiting_element_id": "amp_1_6_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0006-0",
+      "oms_sequence": [
+        "oms_10_11"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.311949212604112,
+        "osnr_db": 19.343158655223796,
+        "margin_db": 4.211949212604113,
+        "limiting_element_id": "amp_10_11_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0007-0",
+      "oms_sequence": [
+        "oms_10_11",
+        "oms_11_12"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 17.820593476164152,
+        "osnr_db": 17.863722058235048,
+        "margin_db": 2.7205934761641526,
+        "limiting_element_id": "amp_11_12_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0008-0",
+      "oms_sequence": [
+        "oms_10_16",
+        "oms_16_13"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 16.269150443592906,
+        "osnr_db": 16.34682662606093,
+        "margin_db": 1.1691504435929065,
+        "limiting_element_id": "amp_16_13_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0009-0",
+      "oms_sequence": [
+        "oms_10_16"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 18.66802085263498,
+        "osnr_db": 18.747703197274227,
+        "margin_db": 3.568020852634982,
+        "limiting_element_id": "amp_10_16_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0010-0",
+      "oms_sequence": [
+        "oms_10_7",
+        "oms_7_3",
+        "oms_3_2"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 15.591681006587804,
+        "osnr_db": 15.695947386753332,
+        "margin_db": 0.4916810065878039,
+        "limiting_element_id": "amp_7_3_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0011-0",
+      "oms_sequence": [
+        "oms_10_5",
+        "oms_5_3"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 16.70012727267077,
+        "osnr_db": 16.752288790836523,
+        "margin_db": 1.60012727267077,
+        "limiting_element_id": "amp_10_5_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0012-0",
+      "oms_sequence": [
+        "oms_10_5"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 18.228081245722304,
+        "osnr_db": 18.277621424668148,
+        "margin_db": 3.1280812457223046,
+        "limiting_element_id": "amp_10_5_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0013-0",
+      "oms_sequence": [
+        "oms_10_7"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191600000000000.0,
+      "qot": {
+        "gsnr_db": 17.97048410756981,
+        "osnr_db": 18.05248840798456,
+        "margin_db": 2.87048410756981,
+        "limiting_element_id": "amp_10_7_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0014-0",
+      "oms_sequence": [
+        "oms_10_9"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 17.173768187937547,
+        "osnr_db": 17.251721272056805,
+        "margin_db": 2.0737681879375476,
+        "limiting_element_id": "amp_10_9_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0015-0",
+      "oms_sequence": [
+        "oms_11_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.311949212604112,
+        "osnr_db": 19.343158655223796,
+        "margin_db": 4.211949212604113,
+        "limiting_element_id": "amp_11_10_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0018-0",
+      "oms_sequence": [
+        "oms_12_11",
+        "oms_11_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 17.820593476164152,
+        "osnr_db": 17.86370334406344,
+        "margin_db": 2.7205934761641526,
+        "limiting_element_id": "amp_11_10_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0021-0",
+      "oms_sequence": [
+        "oms_13_16",
+        "oms_16_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 16.269150443592906,
+        "osnr_db": 16.34682662606093,
+        "margin_db": 1.1691504435929065,
+        "limiting_element_id": "amp_16_13_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0024-0",
+      "oms_sequence": [
+        "oms_13_14"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.277553535238567,
+        "osnr_db": 19.308572874295827,
+        "margin_db": 4.177553535238568,
+        "limiting_element_id": "amp_13_14_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0027-0",
+      "oms_sequence": [
+        "oms_14_13"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.277553535238567,
+        "osnr_db": 19.308572874295827,
+        "margin_db": 4.177553535238568,
+        "limiting_element_id": "amp_14_13_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0028-0",
+      "oms_sequence": [
+        "oms_15_16"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 18.331228550788442,
+        "osnr_db": 18.38170682629314,
+        "margin_db": 3.231228550788442,
+        "limiting_element_id": "amp_15_16_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0029-0",
+      "oms_sequence": [
+        "oms_16_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 18.66802085263498,
+        "osnr_db": 18.747703197274227,
+        "margin_db": 3.568020852634982,
+        "limiting_element_id": "amp_16_10_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0031-0",
+      "oms_sequence": [
+        "oms_16_15"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 18.331228550788442,
+        "osnr_db": 18.38170682629314,
+        "margin_db": 3.231228550788442,
+        "limiting_element_id": "amp_16_15_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0034-0",
+      "oms_sequence": [
+        "oms_2_3",
+        "oms_3_5",
+        "oms_5_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 15.879901473211863,
+        "osnr_db": 15.93089558128285,
+        "margin_db": 0.7799014732118632,
+        "limiting_element_id": "amp_3_5_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0035-0",
+      "oms_sequence": [
+        "oms_2_3"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 19.966828345584332,
+        "osnr_db": 19.976057826108928,
+        "margin_db": 4.866828345584333,
+        "limiting_element_id": "amp_2_3_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0039-0",
+      "oms_sequence": [
+        "oms_2_4"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.970232370994225,
+        "osnr_db": 19.977036234539092,
+        "margin_db": 4.870232370994225,
+        "limiting_element_id": "amp_2_4_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0042-0",
+      "oms_sequence": [
+        "oms_3_7",
+        "oms_7_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 16.371895513444194,
+        "osnr_db": 16.470093354583504,
+        "margin_db": 1.2718955134441945,
+        "limiting_element_id": "amp_7_10_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0053-0",
+      "oms_sequence": [
+        "oms_4_2"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.96955926702848,
+        "osnr_db": 19.97703597022198,
+        "margin_db": 4.86955926702848,
+        "limiting_element_id": "amp_4_2_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0058-0",
+      "oms_sequence": [
+        "oms_5_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191600000000000.0,
+      "qot": {
+        "gsnr_db": 18.23201675802909,
+        "osnr_db": 18.2762473761029,
+        "margin_db": 3.1320167580290903,
+        "limiting_element_id": "amp_5_10_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0065-0",
+      "oms_sequence": [
+        "oms_6_1"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 19.62699446800248,
+        "osnr_db": 19.687365390310664,
+        "margin_db": 4.52699446800248,
+        "limiting_element_id": "amp_6_1_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0067-0",
+      "oms_sequence": [
+        "oms_7_1",
+        "oms_1_0"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 17.601941588854345,
+        "osnr_db": 17.682135635362982,
+        "margin_db": 2.5019415888543453,
+        "limiting_element_id": "amp_1_7_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0070-0",
+      "oms_sequence": [
+        "oms_7_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191700000000000.0,
+      "qot": {
+        "gsnr_db": 17.96885751481557,
+        "osnr_db": 18.051049443658297,
+        "margin_db": 2.8688575148155717,
+        "limiting_element_id": "amp_7_10_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0079-0",
+      "oms_sequence": [
+        "oms_7_8"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 18.28089514559553,
+        "osnr_db": 18.37814525689127,
+        "margin_db": 3.18089514559553,
+        "limiting_element_id": "amp_7_8_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0081-0",
+      "oms_sequence": [
+        "oms_8_7"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 18.28089514559553,
+        "osnr_db": 18.37814525689127,
+        "margin_db": 3.18089514559553,
+        "limiting_element_id": "amp_8_7_0"
+      }
+    },
+    {
+      "id": "lp-cand-d0083-0",
+      "oms_sequence": [
+        "oms_9_10"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 17.173768187937547,
+        "osnr_db": 17.251721272056805,
+        "margin_db": 2.0737681879375476,
+        "limiting_element_id": "amp_9_10_0"
+      }
+    },
+    {
+      "id": "lp-prot-d0004-0",
+      "oms_sequence": [
+        "oms_1_6",
+        "oms_6_7"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 17.45462443385247,
+        "osnr_db": 17.532146200736626,
+        "margin_db": 2.35462443385247,
+        "limiting_element_id": "amp_6_7_booster"
+      }
+    },
+    {
+      "id": "lp-prot-d0035-0",
+      "oms_sequence": [
+        "oms_2_4",
+        "oms_4_5",
+        "oms_5_3"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 16.814368953058974,
+        "osnr_db": 16.84694940756254,
+        "margin_db": 1.7143689530589743,
+        "limiting_element_id": "amp_4_5_booster"
+      }
+    },
+    {
+      "id": "lp-prot-d0043-0",
+      "oms_sequence": [
+        "oms_3_5",
+        "oms_5_4",
+        "oms_4_2"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 16.81170037183556,
+        "osnr_db": 16.846796234757786,
+        "margin_db": 1.7117003718355601,
+        "limiting_element_id": "amp_5_4_booster"
+      }
+    },
+    {
+      "id": "lp-prot-d0048-0",
+      "oms_sequence": [
+        "oms_3_5"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191600000000000.0,
+      "qot": {
+        "gsnr_db": 19.19919932828804,
+        "osnr_db": 19.23298248952537,
+        "margin_db": 4.099199328288039,
+        "limiting_element_id": "amp_3_5_0"
+      }
+    },
+    {
+      "id": "lp-prot-d0050-0",
+      "oms_sequence": [
+        "oms_3_0",
+        "oms_0_1",
+        "oms_1_7"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191600000000000.0,
+      "qot": {
+        "gsnr_db": 15.90517266698313,
+        "osnr_db": 16.026940879549137,
+        "margin_db": 0.8051726669831307,
+        "limiting_element_id": "amp_0_1_booster"
+      }
+    },
+    {
+      "id": "lp-prot-d0055-0",
+      "oms_sequence": [
+        "oms_4_5"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191600000000000.0,
+      "qot": {
+        "gsnr_db": 19.963176232143244,
+        "osnr_db": 19.975079538384854,
+        "margin_db": 4.863176232143244,
+        "limiting_element_id": "amp_4_5_0"
+      }
+    },
+    {
+      "id": "lp-prot-d0060-0",
+      "oms_sequence": [
+        "oms_5_4",
+        "oms_4_2",
+        "oms_2_3"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191600000000000.0,
+      "qot": {
+        "gsnr_db": 17.243195885670453,
+        "osnr_db": 17.261724559195407,
+        "margin_db": 2.143195885670453,
+        "limiting_element_id": "amp_4_2_booster"
+      }
+    },
+    {
+      "id": "lp-prot-d0062-0",
+      "oms_sequence": [
+        "oms_5_4"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191700000000000.0,
+      "qot": {
+        "gsnr_db": 19.960990867389064,
+        "osnr_db": 19.9741020464348,
+        "margin_db": 4.860990867389065,
+        "limiting_element_id": "amp_5_4_0"
+      }
+    },
+    {
+      "id": "lp-prot-d0068-0",
+      "oms_sequence": [
+        "oms_7_6",
+        "oms_6_1"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 17.45462443385247,
+        "osnr_db": 17.5321954305109,
+        "margin_db": 2.35462443385247,
+        "limiting_element_id": "amp_6_1_booster"
+      }
+    },
+    {
+      "id": "lp-prot-d0074-0",
+      "oms_sequence": [
+        "oms_7_3"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191500000000000.0,
+      "qot": {
+        "gsnr_db": 18.93368085268441,
+        "osnr_db": 19.016798011039224,
+        "margin_db": 3.8336808526844113,
+        "limiting_element_id": "amp_7_3_0"
+      }
+    },
+    {
+      "id": "lp-prot-d0080-0",
+      "oms_sequence": [
+        "oms_7_9"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 17.92820054982739,
+        "osnr_db": 17.997134004810967,
+        "margin_db": 2.8282005498273914,
+        "limiting_element_id": "amp_7_9_0"
+      }
+    },
+    {
+      "id": "lp-prot-d0086-0",
+      "oms_sequence": [
+        "oms_9_7"
+      ],
+      "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 17.92820054982739,
+        "osnr_db": 17.997134004810967,
+        "margin_db": 2.8282005498273914,
+        "limiting_element_id": "amp_9_7_0"
+      }
+    }
+  ],
+  "ip_links": [
+    {
+      "id": "ipl-cand-d0000-0",
+      "a_router": "router_0",
+      "z_router": "router_1",
+      "lightpath_id": "lp-cand-d0000-0"
+    },
+    {
+      "id": "ipl-cand-d0001-0",
+      "a_router": "router_0",
+      "z_router": "router_7",
+      "lightpath_id": "lp-cand-d0001-0"
+    },
+    {
+      "id": "ipl-cand-d0002-0",
+      "a_router": "router_1",
+      "z_router": "router_0",
+      "lightpath_id": "lp-cand-d0002-0"
+    },
+    {
+      "id": "ipl-cand-d0003-0",
+      "a_router": "router_1",
+      "z_router": "router_6",
+      "lightpath_id": "lp-cand-d0003-0"
+    },
+    {
+      "id": "ipl-prot-d0004-0",
+      "a_router": "router_1",
+      "z_router": "router_7",
+      "lightpath_id": "lp-prot-d0004-0"
+    },
+    {
+      "id": "ipl-cand-d0006-0",
+      "a_router": "router_10",
+      "z_router": "router_11",
+      "lightpath_id": "lp-cand-d0006-0"
+    },
+    {
+      "id": "ipl-cand-d0007-0",
+      "a_router": "router_10",
+      "z_router": "router_12",
+      "lightpath_id": "lp-cand-d0007-0"
+    },
+    {
+      "id": "ipl-cand-d0008-0",
+      "a_router": "router_10",
+      "z_router": "router_13",
+      "lightpath_id": "lp-cand-d0008-0"
+    },
+    {
+      "id": "ipl-cand-d0009-0",
+      "a_router": "router_10",
+      "z_router": "router_16",
+      "lightpath_id": "lp-cand-d0009-0"
+    },
+    {
+      "id": "ipl-cand-d0010-0",
+      "a_router": "router_10",
+      "z_router": "router_2",
+      "lightpath_id": "lp-cand-d0010-0"
+    },
+    {
+      "id": "ipl-cand-d0011-0",
+      "a_router": "router_10",
+      "z_router": "router_3",
+      "lightpath_id": "lp-cand-d0011-0"
+    },
+    {
+      "id": "ipl-cand-d0012-0",
+      "a_router": "router_10",
+      "z_router": "router_5",
+      "lightpath_id": "lp-cand-d0012-0"
+    },
+    {
+      "id": "ipl-cand-d0013-0",
+      "a_router": "router_10",
+      "z_router": "router_7",
+      "lightpath_id": "lp-cand-d0013-0"
+    },
+    {
+      "id": "ipl-cand-d0014-0",
+      "a_router": "router_10",
+      "z_router": "router_9",
+      "lightpath_id": "lp-cand-d0014-0"
+    },
+    {
+      "id": "ipl-cand-d0015-0",
+      "a_router": "router_11",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0015-0"
+    },
+    {
+      "id": "ipl-cand-d0018-0",
+      "a_router": "router_12",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0018-0"
+    },
+    {
+      "id": "ipl-cand-d0021-0",
+      "a_router": "router_13",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0021-0"
+    },
+    {
+      "id": "ipl-cand-d0024-0",
+      "a_router": "router_13",
+      "z_router": "router_14",
+      "lightpath_id": "lp-cand-d0024-0"
+    },
+    {
+      "id": "ipl-cand-d0027-0",
+      "a_router": "router_14",
+      "z_router": "router_13",
+      "lightpath_id": "lp-cand-d0027-0"
+    },
+    {
+      "id": "ipl-cand-d0028-0",
+      "a_router": "router_15",
+      "z_router": "router_16",
+      "lightpath_id": "lp-cand-d0028-0"
+    },
+    {
+      "id": "ipl-cand-d0029-0",
+      "a_router": "router_16",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0029-0"
+    },
+    {
+      "id": "ipl-cand-d0031-0",
+      "a_router": "router_16",
+      "z_router": "router_15",
+      "lightpath_id": "lp-cand-d0031-0"
+    },
+    {
+      "id": "ipl-cand-d0034-0",
+      "a_router": "router_2",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0034-0"
+    },
+    {
+      "id": "ipl-cand-d0035-0",
+      "a_router": "router_2",
+      "z_router": "router_3",
+      "lightpath_id": "lp-cand-d0035-0"
+    },
+    {
+      "id": "ipl-prot-d0035-0",
+      "a_router": "router_2",
+      "z_router": "router_3",
+      "lightpath_id": "lp-prot-d0035-0"
+    },
+    {
+      "id": "ipl-cand-d0039-0",
+      "a_router": "router_2",
+      "z_router": "router_4",
+      "lightpath_id": "lp-cand-d0039-0"
+    },
+    {
+      "id": "ipl-cand-d0042-0",
+      "a_router": "router_3",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0042-0"
+    },
+    {
+      "id": "ipl-prot-d0043-0",
+      "a_router": "router_3",
+      "z_router": "router_2",
+      "lightpath_id": "lp-prot-d0043-0"
+    },
+    {
+      "id": "ipl-prot-d0048-0",
+      "a_router": "router_3",
+      "z_router": "router_5",
+      "lightpath_id": "lp-prot-d0048-0"
+    },
+    {
+      "id": "ipl-prot-d0050-0",
+      "a_router": "router_3",
+      "z_router": "router_7",
+      "lightpath_id": "lp-prot-d0050-0"
+    },
+    {
+      "id": "ipl-cand-d0053-0",
+      "a_router": "router_4",
+      "z_router": "router_2",
+      "lightpath_id": "lp-cand-d0053-0"
+    },
+    {
+      "id": "ipl-prot-d0055-0",
+      "a_router": "router_4",
+      "z_router": "router_5",
+      "lightpath_id": "lp-prot-d0055-0"
+    },
+    {
+      "id": "ipl-cand-d0058-0",
+      "a_router": "router_5",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0058-0"
+    },
+    {
+      "id": "ipl-prot-d0060-0",
+      "a_router": "router_5",
+      "z_router": "router_3",
+      "lightpath_id": "lp-prot-d0060-0"
+    },
+    {
+      "id": "ipl-prot-d0062-0",
+      "a_router": "router_5",
+      "z_router": "router_4",
+      "lightpath_id": "lp-prot-d0062-0"
+    },
+    {
+      "id": "ipl-cand-d0065-0",
+      "a_router": "router_6",
+      "z_router": "router_1",
+      "lightpath_id": "lp-cand-d0065-0"
+    },
+    {
+      "id": "ipl-cand-d0067-0",
+      "a_router": "router_7",
+      "z_router": "router_0",
+      "lightpath_id": "lp-cand-d0067-0"
+    },
+    {
+      "id": "ipl-prot-d0068-0",
+      "a_router": "router_7",
+      "z_router": "router_1",
+      "lightpath_id": "lp-prot-d0068-0"
+    },
+    {
+      "id": "ipl-cand-d0070-0",
+      "a_router": "router_7",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0070-0"
+    },
+    {
+      "id": "ipl-prot-d0074-0",
+      "a_router": "router_7",
+      "z_router": "router_3",
+      "lightpath_id": "lp-prot-d0074-0"
+    },
+    {
+      "id": "ipl-cand-d0079-0",
+      "a_router": "router_7",
+      "z_router": "router_8",
+      "lightpath_id": "lp-cand-d0079-0"
+    },
+    {
+      "id": "ipl-prot-d0080-0",
+      "a_router": "router_7",
+      "z_router": "router_9",
+      "lightpath_id": "lp-prot-d0080-0"
+    },
+    {
+      "id": "ipl-cand-d0081-0",
+      "a_router": "router_8",
+      "z_router": "router_7",
+      "lightpath_id": "lp-cand-d0081-0"
+    },
+    {
+      "id": "ipl-cand-d0083-0",
+      "a_router": "router_9",
+      "z_router": "router_10",
+      "lightpath_id": "lp-cand-d0083-0"
+    },
+    {
+      "id": "ipl-prot-d0086-0",
+      "a_router": "router_9",
+      "z_router": "router_7",
+      "lightpath_id": "lp-prot-d0086-0"
+    }
+  ],
+  "services": [
+    {
+      "id": "d0000",
+      "src_router": "router_0",
+      "dst_router": "router_1",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0000-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0001",
+      "src_router": "router_0",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0001-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0002",
+      "src_router": "router_1",
+      "dst_router": "router_0",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0002-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0003",
+      "src_router": "router_1",
+      "dst_router": "router_6",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0003-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0004",
+      "src_router": "router_1",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0002-0",
+        "ipl-cand-d0001-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0004-0"
+      ]
+    },
+    {
+      "id": "d0005",
+      "src_router": "router_1",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0004-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0002-0",
+        "ipl-cand-d0001-0"
+      ]
+    },
+    {
+      "id": "d0006",
+      "src_router": "router_10",
+      "dst_router": "router_11",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0006-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0007",
+      "src_router": "router_10",
+      "dst_router": "router_12",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0007-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0008",
+      "src_router": "router_10",
+      "dst_router": "router_13",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0008-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0009",
+      "src_router": "router_10",
+      "dst_router": "router_16",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0009-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0010",
+      "src_router": "router_10",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0010-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0011",
+      "src_router": "router_10",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0011-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0012",
+      "src_router": "router_10",
+      "dst_router": "router_5",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0012-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0013",
+      "src_router": "router_10",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0013-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0014",
+      "src_router": "router_10",
+      "dst_router": "router_9",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0014-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0015",
+      "src_router": "router_11",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0015-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0016",
+      "src_router": "router_11",
+      "dst_router": "router_12",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0015-0",
+        "ipl-cand-d0007-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0017",
+      "src_router": "router_11",
+      "dst_router": "router_13",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0015-0",
+        "ipl-cand-d0008-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0018",
+      "src_router": "router_12",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0018-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0019",
+      "src_router": "router_12",
+      "dst_router": "router_11",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0018-0",
+        "ipl-cand-d0006-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0020",
+      "src_router": "router_12",
+      "dst_router": "router_13",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0018-0",
+        "ipl-cand-d0008-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0021",
+      "src_router": "router_13",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0021-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0022",
+      "src_router": "router_13",
+      "dst_router": "router_11",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0021-0",
+        "ipl-cand-d0006-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0023",
+      "src_router": "router_13",
+      "dst_router": "router_12",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0021-0",
+        "ipl-cand-d0007-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0024",
+      "src_router": "router_13",
+      "dst_router": "router_14",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0024-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0025",
+      "src_router": "router_13",
+      "dst_router": "router_16",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0021-0",
+        "ipl-cand-d0009-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0026",
+      "src_router": "router_13",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0021-0",
+        "ipl-cand-d0013-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0027",
+      "src_router": "router_14",
+      "dst_router": "router_13",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0027-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0028",
+      "src_router": "router_15",
+      "dst_router": "router_16",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0028-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0029",
+      "src_router": "router_16",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0029-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0030",
+      "src_router": "router_16",
+      "dst_router": "router_13",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0029-0",
+        "ipl-cand-d0008-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0031",
+      "src_router": "router_16",
+      "dst_router": "router_15",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0031-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0032",
+      "src_router": "router_16",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0029-0",
+        "ipl-cand-d0013-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0033",
+      "src_router": "router_16",
+      "dst_router": "router_9",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0029-0",
+        "ipl-cand-d0014-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0034",
+      "src_router": "router_2",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0034-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0035",
+      "src_router": "router_2",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0035-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0035-0"
+      ]
+    },
+    {
+      "id": "d0036",
+      "src_router": "router_2",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0035-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0035-0"
+      ]
+    },
+    {
+      "id": "d0037",
+      "src_router": "router_2",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0035-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0035-0"
+      ]
+    },
+    {
+      "id": "d0038",
+      "src_router": "router_2",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0035-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0035-0"
+      ]
+    },
+    {
+      "id": "d0039",
+      "src_router": "router_2",
+      "dst_router": "router_4",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0039-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0040",
+      "src_router": "router_2",
+      "dst_router": "router_5",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0034-0",
+        "ipl-cand-d0012-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0041",
+      "src_router": "router_2",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0034-0",
+        "ipl-cand-d0013-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0042",
+      "src_router": "router_3",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0042-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0043",
+      "src_router": "router_3",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0010-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0043-0"
+      ]
+    },
+    {
+      "id": "d0044",
+      "src_router": "router_3",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0043-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0010-0"
+      ]
+    },
+    {
+      "id": "d0045",
+      "src_router": "router_3",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0043-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0010-0"
+      ]
+    },
+    {
+      "id": "d0046",
+      "src_router": "router_3",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0043-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0010-0"
+      ]
+    },
+    {
+      "id": "d0047",
+      "src_router": "router_3",
+      "dst_router": "router_4",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0043-0",
+        "ipl-cand-d0039-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0048",
+      "src_router": "router_3",
+      "dst_router": "router_5",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0012-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0048-0"
+      ]
+    },
+    {
+      "id": "d0049",
+      "src_router": "router_3",
+      "dst_router": "router_5",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0048-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0012-0"
+      ]
+    },
+    {
+      "id": "d0050",
+      "src_router": "router_3",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0013-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0050-0"
+      ]
+    },
+    {
+      "id": "d0051",
+      "src_router": "router_3",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0050-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0013-0"
+      ]
+    },
+    {
+      "id": "d0052",
+      "src_router": "router_3",
+      "dst_router": "router_9",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0042-0",
+        "ipl-cand-d0014-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0053",
+      "src_router": "router_4",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0053-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0054",
+      "src_router": "router_4",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0053-0",
+        "ipl-cand-d0035-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0055",
+      "src_router": "router_4",
+      "dst_router": "router_5",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0053-0",
+        "ipl-cand-d0034-0",
+        "ipl-cand-d0012-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0055-0"
+      ]
+    },
+    {
+      "id": "d0056",
+      "src_router": "router_4",
+      "dst_router": "router_5",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0055-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0053-0",
+        "ipl-cand-d0034-0",
+        "ipl-cand-d0012-0"
+      ]
+    },
+    {
+      "id": "d0057",
+      "src_router": "router_4",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0053-0",
+        "ipl-cand-d0034-0",
+        "ipl-cand-d0013-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0058",
+      "src_router": "router_5",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0058-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0059",
+      "src_router": "router_5",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0058-0",
+        "ipl-cand-d0010-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0060",
+      "src_router": "router_5",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0058-0",
+        "ipl-cand-d0011-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0060-0"
+      ]
+    },
+    {
+      "id": "d0061",
+      "src_router": "router_5",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0060-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0058-0",
+        "ipl-cand-d0011-0"
+      ]
+    },
+    {
+      "id": "d0062",
+      "src_router": "router_5",
+      "dst_router": "router_4",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0058-0",
+        "ipl-cand-d0010-0",
+        "ipl-cand-d0039-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0062-0"
+      ]
+    },
+    {
+      "id": "d0063",
+      "src_router": "router_5",
+      "dst_router": "router_4",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0062-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0058-0",
+        "ipl-cand-d0010-0",
+        "ipl-cand-d0039-0"
+      ]
+    },
+    {
+      "id": "d0064",
+      "src_router": "router_5",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0060-0",
+        "ipl-prot-d0050-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0065",
+      "src_router": "router_6",
+      "dst_router": "router_1",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0065-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0066",
+      "src_router": "router_6",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0065-0",
+        "ipl-prot-d0004-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0067",
+      "src_router": "router_7",
+      "dst_router": "router_0",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0067-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0068",
+      "src_router": "router_7",
+      "dst_router": "router_1",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0067-0",
+        "ipl-cand-d0000-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0068-0"
+      ]
+    },
+    {
+      "id": "d0069",
+      "src_router": "router_7",
+      "dst_router": "router_1",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0068-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0067-0",
+        "ipl-cand-d0000-0"
+      ]
+    },
+    {
+      "id": "d0070",
+      "src_router": "router_7",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0070-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0071",
+      "src_router": "router_7",
+      "dst_router": "router_13",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0070-0",
+        "ipl-cand-d0008-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0072",
+      "src_router": "router_7",
+      "dst_router": "router_16",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0070-0",
+        "ipl-cand-d0009-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0073",
+      "src_router": "router_7",
+      "dst_router": "router_2",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0070-0",
+        "ipl-cand-d0010-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0074",
+      "src_router": "router_7",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0070-0",
+        "ipl-cand-d0011-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0074-0"
+      ]
+    },
+    {
+      "id": "d0075",
+      "src_router": "router_7",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0074-0"
+      ],
+      "protection_path": [
+        "ipl-cand-d0070-0",
+        "ipl-cand-d0011-0"
+      ]
+    },
+    {
+      "id": "d0076",
+      "src_router": "router_7",
+      "dst_router": "router_4",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0070-0",
+        "ipl-cand-d0010-0",
+        "ipl-cand-d0039-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0077",
+      "src_router": "router_7",
+      "dst_router": "router_5",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0074-0",
+        "ipl-prot-d0048-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0078",
+      "src_router": "router_7",
+      "dst_router": "router_6",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0068-0",
+        "ipl-cand-d0003-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0079",
+      "src_router": "router_7",
+      "dst_router": "router_8",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0079-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0080",
+      "src_router": "router_7",
+      "dst_router": "router_9",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0070-0",
+        "ipl-cand-d0014-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0080-0"
+      ]
+    },
+    {
+      "id": "d0081",
+      "src_router": "router_8",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0081-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0082",
+      "src_router": "router_8",
+      "dst_router": "router_9",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0081-0",
+        "ipl-prot-d0080-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0083",
+      "src_router": "router_9",
+      "dst_router": "router_10",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0083-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0084",
+      "src_router": "router_9",
+      "dst_router": "router_16",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0083-0",
+        "ipl-cand-d0009-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0085",
+      "src_router": "router_9",
+      "dst_router": "router_3",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0083-0",
+        "ipl-cand-d0011-0"
+      ],
+      "protection_path": []
+    },
+    {
+      "id": "d0086",
+      "src_router": "router_9",
+      "dst_router": "router_7",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-cand-d0083-0",
+        "ipl-cand-d0013-0"
+      ],
+      "protection_path": [
+        "ipl-prot-d0086-0"
+      ]
+    },
+    {
+      "id": "d0087",
+      "src_router": "router_9",
+      "dst_router": "router_8",
+      "demand_gbps": 100.0,
+      "working_path": [
+        "ipl-prot-d0086-0",
+        "ipl-cand-d0079-0"
+      ],
+      "protection_path": []
+    }
+  ]
+}
