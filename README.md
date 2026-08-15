@@ -74,7 +74,30 @@ multilayer-optical-mcp
 ```
 
 Runs the MCP server over stdio, ready to be pointed at by any MCP-speaking
-client or host application.
+client or host application. With no flags, it starts from an empty
+`NetworkModel`.
+
+Pass `--topology` to seed the model from a topology JSON file at startup:
+
+```bash
+multilayer-optical-mcp --topology topo.json
+```
+
+That loads the physical layer (ROADMs, fibers, spans, SRLGs) only — no
+lightpaths, IP links, or services. For a fully-loaded operating network, build
+one offline with `multilayer-optical-mcp-build` and load it alongside the
+topology with `--state`:
+
+```bash
+multilayer-optical-mcp-build --topology topo.json --out state.json
+multilayer-optical-mcp --topology topo.json --state state.json
+```
+
+The build is a batch job — minutes on a small topology, tens of minutes on a
+large one — so it is a separate console script, not something the server
+re-runs on every spawn. `state.json` is a delta (lightpaths with QoT, IP
+links, services) keyed to `topo.json` by a content fingerprint; the server
+refuses to start if the two do not match. `--state` requires `--topology`.
 
 ## Test
 
