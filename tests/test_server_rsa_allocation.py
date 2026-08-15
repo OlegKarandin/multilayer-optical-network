@@ -1,25 +1,16 @@
-"""Phase 4 (rest) server tools: check_spectrum_feasibility, solve_rsa,
+"""RSA + allocation server tools: check_spectrum_feasibility, solve_rsa,
 solve_allocation, end-to-end through the FastMCP app over the default toy_2span
-gnpy topology (real GNPy). Mirrors test_server_phase4.py."""
+gnpy topology (real GNPy). Mirrors test_server_routing.py."""
 from __future__ import annotations
-
-import asyncio
 
 from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, ROADM, OMS, Lightpath, Transceiver
 from multilayer_optical_mcp.model.ip_assets import Router
+from tests.conftest import call_tool
 
 
 def _tool_names(app) -> set[str]:
     return set(app._tool_manager._tools.keys())
-
-
-def _call(app, name: str, **kwargs):
-    tool = app._tool_manager._tools[name]
-    result = tool.fn(**kwargs)
-    if asyncio.iscoroutine(result):
-        return asyncio.run(result)
-    return result
 
 
 def _seed_app():
@@ -66,12 +57,12 @@ def test_server_registers_phase_4_rsa_tools():
 def test_check_spectrum_feasibility_clash_after_lightpath():
     app, m = _seed_app()
     # Free slot -> feasible.
-    free = _call(app, "check_spectrum_feasibility",
+    free = call_tool(app, "check_spectrum_feasibility",
                  path=["oms-AZ"], center_freq_hz=193.4e12)
     assert free["feasible"] is True and free["clashes"] == []
     # Light a channel at that freq -> clash.
     m.add_lightpath(Lightpath("lp1", ("oms-AZ",), "400G@7.1dB", 193.4e12))
-    clash = _call(app, "check_spectrum_feasibility",
+    clash = call_tool(app, "check_spectrum_feasibility",
                   path=["oms-AZ"], center_freq_hz=193.4e12)
     assert clash["feasible"] is False
     assert clash["clashes"][0]["oms_id"] == "oms-AZ"
@@ -79,7 +70,7 @@ def test_check_spectrum_feasibility_clash_after_lightpath():
 
 def test_solve_rsa_places_demand_with_real_gnpy_mode():
     app, _ = _seed_app()
-    out = _call(app, "solve_rsa",
+    out = call_tool(app, "solve_rsa",
                 demands=[{"id": "d1", "src": "A", "dst": "Z"}])
     assert out["status"] == "solution"
     p = out["placements"][0]
@@ -110,12 +101,12 @@ def test_solve_rsa_shares_harvest_cache_across_tool_calls(monkeypatch):
 
     demand = {"id": "d1", "src": "A", "dst": "Z"}
 
-    out1 = _call(app, "solve_rsa", demands=[demand])
+    out1 = call_tool(app, "solve_rsa", demands=[demand])
     assert out1["status"] == "solution"
     assert hits and not any(hits)   # first call: cache starts empty, all misses
 
     hits.clear()
-    out2 = _call(app, "solve_rsa", demands=[demand])
+    out2 = call_tool(app, "solve_rsa", demands=[demand])
     assert out2["status"] == "solution"
     # Second call over the SAME unchanged model reuses the first call's
     # harvested comb -- proof the cache instance, not just its behavior,
@@ -126,7 +117,7 @@ def test_solve_rsa_shares_harvest_cache_across_tool_calls(monkeypatch):
 
 def test_solve_allocation_greenfield_with_inventory():
     app, _ = _seed_app()
-    out = _call(app, "solve_allocation",
+    out = call_tool(app, "solve_allocation",
                 demands=[{"id": "d1", "src": "A", "dst": "Z",
                           "demand_gbps": 100.0}],
                 spare_inventory={"A": 1, "Z": 1})
@@ -137,7 +128,7 @@ def test_solve_allocation_greenfield_with_inventory():
 
 def test_solve_allocation_no_inventory_is_no_solution():
     app, _ = _seed_app()
-    out = _call(app, "solve_allocation",
+    out = call_tool(app, "solve_allocation",
                 demands=[{"id": "d1", "src": "A", "dst": "Z",
                           "demand_gbps": 100.0}],
                 spare_inventory={"A": 0, "Z": 0})

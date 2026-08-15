@@ -1,4 +1,3 @@
-# tests/test_server_phase8.py
 """compute_restoration MCP tool returns a structured candidate list."""
 import pytest
 from multilayer_optical_mcp.model.restoration import (
@@ -15,6 +14,7 @@ from multilayer_optical_mcp.model.assets import FiberType
 from multilayer_optical_mcp.model.ip_assets import Router, Service
 from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.testing import add_bidir_span
+from tests.conftest import call_tool
 
 
 def test_restoration_result_dict_shape():
@@ -44,10 +44,6 @@ def test_restoration_result_dict_shape():
     assert c1["new_lightpaths"][0]["oms_sequence"] == ["oms-AB"]
     assert c1["new_lightpaths"][0]["lam"] == 0
     assert c1["new_lightpaths"][0]["bitrate_gbps"] == 100.0
-
-
-def _call(app, name, **kwargs):
-    return app._tool_manager._tools[name].fn(**kwargs)
 
 
 def _seed(app):
@@ -128,10 +124,10 @@ def test_route_service_result_dict_shape():
 def test_route_service_and_evaluate_objective_tools_registered():
     app = build_app()
     _seed(app)
-    out = _call(app, "evaluate_objective")
+    out = call_tool(app, "evaluate_objective")
     assert "scalar" in out
 
-    menu = _call(app, "route_service", service_id="svc1")
+    menu = call_tool(app, "route_service", service_id="svc1")
     assert menu["status"] in ("solution", "partial", "no_solution")
     assert menu["service_id"] == "svc1"
 
@@ -177,10 +173,10 @@ def test_route_service_tool_sanitizes_nonfinite_cost_vector():
     # Real -inf QoT sentinel on lp-other via production inject_failure (not
     # mocked) -- propagates into total_margin/scalar for EVERY candidate
     # route_service scores, including ones that never touch omsAB.
-    out = _call(app, "inject_failure", asset_ids=["f_omsAB"])
+    out = call_tool(app, "inject_failure", asset_ids=["f_omsAB"])
     assert "lp-other" in out["downed_lightpaths"]
 
-    menu = _call(app, "route_service", service_id="svcCD")
+    menu = call_tool(app, "route_service", service_id="svcCD")
     assert menu["status"] in ("solution", "partial", "no_solution")
     assert menu["candidates"], "expected at least one candidate for svcCD"
     cv = menu["candidates"][0]["cost_vector"]
@@ -208,10 +204,10 @@ def test_evaluate_objective_state_param_reads_the_named_snapshot_not_current():
     _seed(app)
     # svc1 is unrouted (working_path=()) -> its 100 Gbps demand is dropped in
     # whatever state we score it against.
-    baseline = _call(app, "evaluate_objective")
+    baseline = call_tool(app, "evaluate_objective")
     assert baseline["dropped_traffic"] == pytest.approx(100.0)
 
-    snap_id = _call(app, "snapshot_create")["id"]
+    snap_id = call_tool(app, "snapshot_create")["id"]
 
     # Mutate `current()` AFTER the snapshot: add a second unrouted service.
     # The snapshot must not see it -- proving state=<id> resolves via
@@ -221,8 +217,8 @@ def test_evaluate_objective_state_param_reads_the_named_snapshot_not_current():
         id="svc2", src_router="RA", dst_router="RC",
         demand_gbps=40.0, working_path=()))
 
-    current_after = _call(app, "evaluate_objective")
+    current_after = call_tool(app, "evaluate_objective")
     assert current_after["dropped_traffic"] == pytest.approx(140.0)   # svc1 + svc2
 
-    snapshot_result = _call(app, "evaluate_objective", state=snap_id)
+    snapshot_result = call_tool(app, "evaluate_objective", state=snap_id)
     assert snapshot_result["dropped_traffic"] == pytest.approx(100.0)  # svc1 only

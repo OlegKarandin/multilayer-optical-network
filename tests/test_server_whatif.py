@@ -1,4 +1,3 @@
-# tests/test_server_phase6.py
 import json
 import math
 import pytest
@@ -6,11 +5,7 @@ from multilayer_optical_mcp.server import build_app
 from multilayer_optical_mcp.model.assets import FiberType, Amplifier, Fiber, OMS, ROADM, Lightpath, Transceiver
 from multilayer_optical_mcp.model.modes import default_modes
 from multilayer_optical_mcp.model.qot import QoTState
-
-
-def _call(app, name, **kwargs):
-    """Invoke a registered FastMCP tool's underlying function directly."""
-    return app._tool_manager._tools[name].fn(**kwargs)
+from tests.conftest import call_tool
 
 
 def _assert_json_finite(obj):
@@ -50,7 +45,7 @@ def _seed_branch_with_lightpath(app):
 def test_whatif_sweep_tool_lists_fragile():
     app = build_app()
     _seed_branch_with_lightpath(app)
-    out = _call(app, "whatif_margin_threshold_sweep", threshold_db=1.0)
+    out = call_tool(app, "whatif_margin_threshold_sweep", threshold_db=1.0)
     assert "fragile" in out
     assert any(row["lightpath_id"] == "lpAB" for row in out["fragile"])
     assert all(row["margin_db"] <= 1.0 for row in out["fragile"])
@@ -60,7 +55,7 @@ def test_whatif_sweep_tool_empty_when_all_healthy():
     app = build_app()
     _seed_branch_with_lightpath(app)
     # threshold below lpAB's margin of 0.5 => nothing fragile
-    out = _call(app, "whatif_margin_threshold_sweep", threshold_db=0.1)
+    out = call_tool(app, "whatif_margin_threshold_sweep", threshold_db=0.1)
     assert "fragile" in out
     assert out["fragile"] == []
 
@@ -69,7 +64,7 @@ def test_inject_failure_tool_downs_lightpath():
     app = build_app()
     _seed_branch_with_lightpath(app)
     # fAB is in omsAB elements, so lpAB crosses it
-    out = _call(app, "inject_failure", asset_ids=["fAB"])
+    out = call_tool(app, "inject_failure", asset_ids=["fAB"])
     assert "downed_lightpaths" in out
     assert "lpAB" in out["downed_lightpaths"]
     assert "fAB" in out["failed_assets"]
@@ -78,7 +73,7 @@ def test_inject_failure_tool_downs_lightpath():
 def test_inject_failure_tool_unknown_asset_does_not_down_lightpath():
     app = build_app()
     _seed_branch_with_lightpath(app)
-    out = _call(app, "inject_failure", asset_ids=["fXX"])
+    out = call_tool(app, "inject_failure", asset_ids=["fXX"])
     assert out["downed_lightpaths"] == []
     assert "fXX" in out["failed_assets"]
 
@@ -103,7 +98,7 @@ def test_inject_failure_tool_multiple_assets():
     n.set_qot_state("lpAB", QoTState(gsnr_db=10.0, osnr_db=22.0, margin_db=2.0))
     n.set_qot_state("lpBC", QoTState(gsnr_db=10.0, osnr_db=22.0, margin_db=2.0))
 
-    out = _call(app, "inject_failure", asset_ids=["fAB", "fBC"])
+    out = call_tool(app, "inject_failure", asset_ids=["fAB", "fBC"])
     assert set(out["downed_lightpaths"]) == {"lpAB", "lpBC"}
     assert set(out["failed_assets"]) == {"fAB", "fBC"}
 
@@ -121,9 +116,9 @@ def test_get_lightpaths_sanitizes_failed_asset_margin():
     _seed_branch_with_lightpath(app)
     # inject_failure is physics-free: it writes the real -inf QoT sentinel
     # directly (see whatif.inject_failure), no GNPy call or mocking involved.
-    _call(app, "inject_failure", asset_ids=["fAB"])
+    call_tool(app, "inject_failure", asset_ids=["fAB"])
 
-    out = _call(app, "get_lightpaths")
+    out = call_tool(app, "get_lightpaths")
     lp = next(r for r in out if r["id"] == "lpAB")
     assert lp["qot"]["margin_db"] == "-Infinity"
     assert lp["qot"]["gsnr_db"] == "-Infinity"
@@ -136,9 +131,9 @@ def test_get_lightpaths_sanitizes_failed_asset_margin():
 def test_whatif_margin_threshold_sweep_sanitizes_failed_asset_margin():
     app = build_app()
     _seed_branch_with_lightpath(app)
-    _call(app, "inject_failure", asset_ids=["fAB"])
+    call_tool(app, "inject_failure", asset_ids=["fAB"])
 
-    out = _call(app, "whatif_margin_threshold_sweep", threshold_db=0.0)
+    out = call_tool(app, "whatif_margin_threshold_sweep", threshold_db=0.0)
     row = next(r for r in out["fragile"] if r["lightpath_id"] == "lpAB")
     assert row["margin_db"] == "-Infinity"
     assert row["gsnr_db"] == "-Infinity"
@@ -173,12 +168,12 @@ def test_inject_degradation_sanitizes_nonfinite_margin_before():
     loading_channels = [{"center_freq_hz": 193.4e12, "slot_width_hz": 100e9,
                          "power_dbm": None, "mode_id": mode_id}]
     # Seed a real, finite baseline via an actual GNPy recompute.
-    _call(app, "recompute_qot_under_loading", loading_channels=loading_channels)
+    call_tool(app, "recompute_qot_under_loading", loading_channels=loading_channels)
     assert math.isfinite(app._snapshots.current().get_qot_state("lp0").margin_db)
 
     # inject_failure writes the real -inf QoT sentinel for lp0 (it crosses
     # fiber_0_1_0, on oms_0_1) via production code -- not a mocked value.
-    _call(app, "inject_failure", asset_ids=["fiber_0_1_0"])
+    call_tool(app, "inject_failure", asset_ids=["fiber_0_1_0"])
     assert math.isinf(app._snapshots.current().get_qot_state("lp0").margin_db)
 
     # inject_degradation's internal recompute must not resurrect a failed
@@ -187,7 +182,7 @@ def test_inject_degradation_sanitizes_nonfinite_margin_before():
     # come back as the -inf sentinel here -- genuinely produced, not mocked.
     # Degrade the OTHER amp (amp_0_1_1) so the perturbation itself isn't what
     # causes the non-finite value; the failed sentinel is.
-    out = _call(app, "inject_degradation", asset_id="amp_0_1_1", nf_delta=1.0)
+    out = call_tool(app, "inject_degradation", asset_id="amp_0_1_1", nf_delta=1.0)
     row = next(r for r in out["rows"] if r["lightpath_id"] == "lp0")
     assert row["margin_before"] == "-Infinity"
     assert row["margin_after"] == "-Infinity"
@@ -212,18 +207,18 @@ def test_whatif_sensitivity_tool_flags_perturbed_amp():
                   elements=("roadm_A", "a1", "f1", "a2", "f2")))
     mode_id = n.modes.list()[0].id
 
-    id_a = _call(app, "snapshot_create")["id"]
-    _call(app, "snapshot_branch", parent_id=id_a)   # move current() onto a working branch
+    id_a = call_tool(app, "snapshot_create")["id"]
+    call_tool(app, "snapshot_branch", parent_id=id_a)   # move current() onto a working branch
     app._snapshots.current().apply_nf_delta("a2", 6.0)   # mutate the branch's live working copy
     # Task 12 fix: branch() now clones independently before storing, so the id
     # returned by snapshot_branch captures the PRE-mutation branch point, not
     # whatever current() is later mutated into. Capture the mutated state with
     # a fresh snapshot_create() instead of relying on the branch id for it.
-    id_b = _call(app, "snapshot_create")["id"]
+    id_b = call_tool(app, "snapshot_create")["id"]
 
     loading_channels = [{"center_freq_hz": 193.4e12, "slot_width_hz": 100e9,
                          "power_dbm": None, "mode_id": mode_id}]
-    out = _call(app, "whatif_sensitivity", state_a=id_a, state_b=id_b,
+    out = call_tool(app, "whatif_sensitivity", state_a=id_a, state_b=id_b,
                oms_sequence=["omsAB"], direction="forward", mode_id=mode_id,
                loading_channels=loading_channels)
     assert out["delta_margin_db"] < 0
@@ -249,7 +244,7 @@ def test_compute_qot_tool_rejects_clashing_loading_channels():
          "power_dbm": None, "mode_id": mode_id},
     ]
     with pytest.raises(ValueError, match="spectrum clash"):
-        _call(app, "compute_qot", oms_sequence=["omsAB"], direction="forward",
+        call_tool(app, "compute_qot", oms_sequence=["omsAB"], direction="forward",
              mode_id=mode_id, loading_channels=loading_channels)
 
 
@@ -279,7 +274,7 @@ def test_recompute_qot_under_loading_tool_still_tolerates_shared_frequency():
         {"center_freq_hz": 193.4e12, "slot_width_hz": 100e9,
          "power_dbm": None, "mode_id": mode_id},
     ]
-    out = _call(app, "recompute_qot_under_loading", loading_channels=loading_channels)
+    out = call_tool(app, "recompute_qot_under_loading", loading_channels=loading_channels)
     assert "lpAB" in out
 
 
@@ -299,11 +294,11 @@ def test_recompute_qot_under_loading_tool_sanitizes_failed_asset_margin():
     # inject_failure writes the real -inf QoT sentinel (whatif.inject_failure);
     # recompute_qot_under_loading's own S8-1 logic (adapter.py) re-applies that
     # sentinel rather than resurrecting the lightpath with a feasible GSNR.
-    _call(app, "inject_failure", asset_ids=["fAB"])
+    call_tool(app, "inject_failure", asset_ids=["fAB"])
 
     loading_channels = [{"center_freq_hz": 193.4e12, "slot_width_hz": 100e9,
                          "power_dbm": None, "mode_id": mode_id}]
-    out = _call(app, "recompute_qot_under_loading", loading_channels=loading_channels)
+    out = call_tool(app, "recompute_qot_under_loading", loading_channels=loading_channels)
     row = out["lpAB"]
     assert row["margin_db"] == "-Infinity"
     assert row["gsnr_db"] == "-Infinity"
@@ -317,12 +312,12 @@ def test_validate_plan_tool_sanitizes_mode_infeasible_detail_floats():
     app = build_app()
     _seed_branch_with_lightpath(app)
     # inject_failure writes the real -inf QoT sentinel for lpAB (crosses fAB).
-    _call(app, "inject_failure", asset_ids=["fAB"])
+    call_tool(app, "inject_failure", asset_ids=["fAB"])
 
     # Empty-ops plan validates the standing state (validate.py: `if not
     # plan.ops`), which is enough to surface lpAB's MODE_INFEASIBLE finding
     # (margin_db < 0) without needing any actual plan mutation.
-    out = _call(app, "validate_plan", plan={"ops": []})
+    out = call_tool(app, "validate_plan", plan={"ops": []})
     assert out["ok"] is False
     v = next(v for v in out["violations"] if v["type"] == "mode_infeasible")
     # Discriminated-union flattening: MODE_INFEASIBLE's fields sit at the top
@@ -344,9 +339,9 @@ def test_evaluate_objective_tool_sanitizes_total_margin_and_scalar():
     # inject_failure writes the real -inf QoT sentinel for lpAB; evaluate_objective's
     # total_margin sums every lightpath's margin_db, so -inf propagates straight
     # into total_margin, and from there into the weighted scalar.
-    _call(app, "inject_failure", asset_ids=["fAB"])
+    call_tool(app, "inject_failure", asset_ids=["fAB"])
 
-    out = _call(app, "evaluate_objective")
+    out = call_tool(app, "evaluate_objective")
     assert out["total_margin"] == "-Infinity"
     assert out["scalar"] == "Infinity"   # scalar subtracts total_margin (- -inf = +inf)
 

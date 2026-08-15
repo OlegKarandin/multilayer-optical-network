@@ -2,6 +2,7 @@ from multilayer_optical_mcp.model.assets import Lightpath
 from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_mcp.gnpy_adapter.adapter import _ensure_min_two_channels
 from multilayer_optical_mcp.server import build_app
+from tests.conftest import call_tool
 from tests.gnpy_adapter.test_recompute_under_loading import _model_with_lightpath
 from tests.gnpy_adapter.test_per_path_comb import _diamond_model, ROUTE1, ROUTE2, MODE
 
@@ -19,13 +20,10 @@ def test_recompute_honors_uncommitted_additive_channel_via_mcp_tool():
     n = _model_with_lightpath()  # lp1 committed on oms-AZ @ 193.4 THz
     app = build_app(model=n)
 
-    def _call(name, **kwargs):
-        return app._tool_manager._tools[name].fn(**kwargs)
-
     committed_only = [
         {"center_freq_hz": 193.4e12, "slot_width_hz": 100e9, "mode_id": "400G@7.1dB"},
     ]
-    baseline = _call("recompute_qot_under_loading", loading_channels=committed_only)
+    baseline = call_tool(app, "recompute_qot_under_loading", loading_channels=committed_only)
     baseline_gsnr = baseline["lp1"]["gsnr_db"]
     # NOTE: a single-carrier loading is not actually single-channel by the time
     # it reaches gnpy -- compute_qot's _ensure_min_two_channels injects a
@@ -54,7 +52,7 @@ def test_recompute_honors_uncommitted_additive_channel_via_mcp_tool():
         {"center_freq_hz": 193.5e12, "slot_width_hz": 100e9, "mode_id": "400G@7.1dB"},
         {"center_freq_hz": 193.2e12, "slot_width_hz": 100e9, "mode_id": "400G@7.1dB"},
     ]
-    after = _call("recompute_qot_under_loading", loading_channels=with_extra)
+    after = call_tool(app, "recompute_qot_under_loading", loading_channels=with_extra)
     after_gsnr = after["lp1"]["gsnr_db"]
 
     # The extra channel's NLI must show up as a real, non-negligible drop in
@@ -105,14 +103,11 @@ def test_recompute_does_not_resolve_same_frequency_reroute():
                               mode_id=MODE, center_freq_hz=G))
     app = build_app(model=n)
 
-    def _call(name, **kwargs):
-        return app._tool_manager._tools[name].fn(**kwargs)
-
     committed_only = [
         {"center_freq_hz": F, "slot_width_hz": 100e9, "mode_id": MODE},
         {"center_freq_hz": G, "slot_width_hz": 100e9, "mode_id": MODE},
     ]
-    baseline = _call("recompute_qot_under_loading", loading_channels=committed_only)
+    baseline = call_tool(app, "recompute_qot_under_loading", loading_channels=committed_only)
     baseline_lp2_gsnr = baseline["lp2"]["gsnr_db"]
     assert baseline["_broadcast_to_all_lightpaths_hz"] == []
 
@@ -122,7 +117,7 @@ def test_recompute_does_not_resolve_same_frequency_reroute():
     attempted_reroute = committed_only + [
         {"center_freq_hz": F, "slot_width_hz": 100e9, "mode_id": MODE},
     ]
-    after = _call("recompute_qot_under_loading", loading_channels=attempted_reroute)
+    after = call_tool(app, "recompute_qot_under_loading", loading_channels=attempted_reroute)
     after_lp2_gsnr = after["lp2"]["gsnr_db"]
 
     # The known limitation: F is already in `known` (lp1 still holds it on

@@ -1,4 +1,4 @@
-"""Batch C8 — Stage 4 diagnostics & guards (Steps E, F, G).
+"""QoT diagnostics — Stage 4 diagnostics & guards (Steps E, F, G).
 
 Step E (S4-1/A6): the single-channel dummy is placed at ``probe + 100 GHz``. Near
 the top of the SI band that lands out of band, so it must be placed *below* the
