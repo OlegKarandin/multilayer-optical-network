@@ -8,35 +8,11 @@ Two consequences of the old global comb are fixed:
     two carriers at the same frequency in one SpectralInformation
     (slot_width = f[1]-f[0] = 0).
 """
-from multilayer_optical_mcp.model.assets import Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.modes import ModeRegistry
+from multilayer_optical_mcp.model.assets import Lightpath
 from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 from multilayer_optical_mcp.model.whatif import loading_from_model
 from multilayer_optical_mcp.gnpy_adapter.adapter import recompute_qot_under_loading
-
-MODE = "400G@7.1dB"
-
-
-def _diamond_model():
-    """A-M-Z (route1) and A-N-Z (route2): two node-disjoint routes sharing only
-    the add/drop ROADMs at A and Z. Every OMS has a unique (src,dst)."""
-    mode = TransceiverMode(id=MODE, bitrate_gbps=400.0, required_gsnr_db=7.1,
-                           symbol_rate_baud=87.5e9, channel_spacing_hz=100e9)
-    graph = {
-        "nodes": [{"id": "A"}, {"id": "M"}, {"id": "N"}, {"id": "Z"}],
-        "edges": [
-            {"src": "A", "dst": "M", "length_km": 80.0},
-            {"src": "M", "dst": "Z", "length_km": 80.0},
-            {"src": "A", "dst": "N", "length_km": 80.0},
-            {"src": "N", "dst": "Z", "length_km": 80.0},
-        ],
-    }
-    return model_from_abstract_graph(graph, modes=ModeRegistry([mode]))
-
-
-ROUTE1 = ("oms_A_M", "oms_M_Z")
-ROUTE2 = ("oms_A_N", "oms_N_Z")
+from multilayer_optical_mcp.testing import MODE, ROUTE1, ROUTE2, _diamond_model
 
 
 def _gsnr_of_lp1(add_disjoint_lp2: bool, lp2_freq_hz: float = 193.5e12) -> float:

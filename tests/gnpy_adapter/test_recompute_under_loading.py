@@ -1,23 +1,10 @@
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink
 from multilayer_optical_mcp.model.qot_results import QoTResultStore
 from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_mcp.gnpy_adapter.adapter import (
     recompute_qot_under_loading,
     unattributed_channel_freqs_hz,
 )
-from tests.gnpy_adapter.test_compute_qot import _toy_model
-
-
-def _model_with_lightpath():
-    n = _toy_model()
-    n.add_lightpath(Lightpath(id="lp1", oms_sequence=("oms-AZ",),
-                              mode_id="400G@7.1dB", center_freq_hz=193.4e12))
-    n.add_router(Router(id="R1", site="A"))
-    n.add_router(Router(id="R2", site="Z"))
-    n.add_ip_link(IPLink(id="ip1", a_router="R1", z_router="R2",
-                         lightpath_id="lp1"))
-    return n
+from multilayer_optical_mcp.testing import _model_with_lightpath
 
 
 def test_unattributed_channel_freqs_hz_direct():

@@ -4,14 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from multilayer_optical_mcp.gnpy_adapter.loading import LoadingState
-from multilayer_optical_mcp.model.assets import Direction, Lightpath
+from multilayer_optical_mcp.model.assets import Lightpath
 from multilayer_optical_mcp.model.ip_assets import IPLink, Service
 from multilayer_optical_mcp.model.ip_routing import simulate_ip_routing
 from multilayer_optical_mcp.model.modes import default_modes
 from multilayer_optical_mcp.model.objective import evaluate_objective
 from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.scenario import build_operating_network
 from multilayer_optical_mcp.model.snapshots import diff_models
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 from multilayer_optical_mcp.state_file import (
@@ -21,18 +19,7 @@ from multilayer_optical_mcp.state_file import (
     load_state,
     topology_fingerprint,
 )
-
-TOPOLOGY = {
-    "graph": {
-        "nodes": [{"id": "a"}, {"id": "b"}, {"id": "c"}],
-        "edges": [
-            {"src": "a", "dst": "b", "length_km": 80.0},
-            {"src": "b", "dst": "c", "length_km": 80.0},
-            {"src": "c", "dst": "a", "length_km": 80.0},
-        ],
-    },
-    "srlgs": [{"id": "srlg_ab", "asset_ids": ["roadm_a", "roadm_b"]}],
-}
+from multilayer_optical_mcp.testing import TOPOLOGY, _bare, _built
 
 
 def test_fingerprint_is_stable_and_prefixed():
@@ -136,37 +123,6 @@ def test_dump_state_sorts_collections_but_not_paths():
     assert [lp["id"] for lp in doc["lightpaths"]] == ["lp_0", "lp_1"]
     # ...but the OMS sequence keeps its physical order, unsorted.
     assert doc["lightpaths"][0]["oms_sequence"] == ["oms_b_c", "oms_c_a"]
-
-
-class ConstQot:
-    """Route-agnostic high GSNR: any path clears the top mode's threshold."""
-    def __call__(self, *, oms_sequence, direction, mode_id, loading):
-        return QoTState(gsnr_db=16.0, osnr_db=30.0, margin_db=0.0)
-
-
-def _fake_settle(qot):
-    def _settle(work):
-        for lp in work.list_lightpaths():
-            work.set_qot_state(lp.id, qot(oms_sequence=lp.oms_sequence,
-                                          direction=Direction.FORWARD,
-                                          mode_id=lp.mode_id,
-                                          loading=LoadingState.empty()))
-    return _settle
-
-
-def _bare():
-    modes = default_modes()
-    return model_from_abstract_graph(TOPOLOGY["graph"], modes=modes)
-
-
-def _built():
-    """A REAL packer-built operating network on the 3-node ring, GNPy-free."""
-    qot = ConstQot()
-    res = build_operating_network(_bare(), seed=0, qot=qot, target_mean_util=0.5,
-                                  max_util_cap=0.95, max_iters=6,
-                                  settle=_fake_settle(qot))
-    assert res.model.list_services(), "fixture must actually place something"
-    return res.model
 
 
 def _reload(built):

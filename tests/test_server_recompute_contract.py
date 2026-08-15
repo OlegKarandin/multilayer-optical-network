@@ -2,9 +2,8 @@ from multilayer_optical_mcp.model.assets import Lightpath
 from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_mcp.gnpy_adapter.adapter import _ensure_min_two_channels
 from multilayer_optical_mcp.server import build_app
+from multilayer_optical_mcp.testing import MODE, ROUTE1, ROUTE2, _diamond_model, _model_with_lightpath
 from tests.conftest import call_tool
-from tests.gnpy_adapter.test_recompute_under_loading import _model_with_lightpath
-from tests.gnpy_adapter.test_per_path_comb import _diamond_model, ROUTE1, ROUTE2, MODE
 
 
 def test_recompute_honors_uncommitted_additive_channel_via_mcp_tool():
