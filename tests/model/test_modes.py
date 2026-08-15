@@ -1,11 +1,14 @@
 from pathlib import Path
 import pytest
+import multilayer_optical_mcp
 from multilayer_optical_mcp.model.modes import ModeRegistry, load_modulation_formats
 from multilayer_optical_mcp.model.assets import TransceiverMode
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-MOD_FORMATS_YAML = REPO_ROOT / "modulation_formats.yaml"
+MOD_FORMATS_YAML = (
+    Path(multilayer_optical_mcp.__file__).resolve().parent
+    / "data" / "modulation_formats.yaml"
+)
 
 
 def test_registry_lookup_and_list():

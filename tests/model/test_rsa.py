@@ -1,12 +1,9 @@
 """solve_rsa: route-first (by length), spectrum first-fit, mode-from-SNR.
 
 Placement combinatorics use a deterministic fake QotEvaluator so the routing /
-spectrum / mode logic is exercised without paying GNPy per case. One real-GNPy
-integration case pins the seam to the adapter on toy_2route.json.
+spectrum / mode logic is exercised without paying GNPy per case; the real-GNPy
+integration case for this seam lives in tests/gnpy_adapter/test_ground_truth_bridge.py.
 """
-from pathlib import Path
-
-
 from multilayer_optical_mcp.model.assets import ROADM
 from multilayer_optical_mcp.model.assets import (
     FiberType, Fiber, Amplifier, OMS, SRLG, TransceiverMode,
@@ -16,8 +13,6 @@ from multilayer_optical_mcp.model.network import NetworkModel
 from multilayer_optical_mcp.model.qot import QoTState
 from multilayer_optical_mcp.model.solvers import SolverStatus
 from multilayer_optical_mcp.model.allocation import solve_rsa
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 # --------------------------------------------------------------- fakes / fixtures

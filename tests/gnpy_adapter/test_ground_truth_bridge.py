@@ -13,9 +13,14 @@ from multilayer_optical_mcp.model.network import NetworkModel
 from multilayer_optical_mcp.model.qot_results import QoTResultStore
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 
+import multilayer_optical_mcp
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TOY = REPO_ROOT / "topologies" / "toy_2span.json"
-GERMAN_17 = REPO_ROOT / "topologies" / "german_17.json"
+TOY = REPO_ROOT / "tests" / "fixtures" / "toy_2span.json"
+EQPT = REPO_ROOT / "tests" / "fixtures" / "eqpt" / "eqpt_config.json"
+GERMAN_17 = (
+    Path(multilayer_optical_mcp.__file__).resolve().parent / "data" / "german_17.json"
+)
 MODE = "400G@7.1dB"
 TOL_DB = 0.25
 
@@ -96,13 +101,13 @@ def _gsnr_synthesized() -> float:
 
 
 def _gsnr_legacy() -> float:
-    """GSNR from the file-loaded toy_2span.json via topo_path."""
+    """GSNR from the file-loaded toy_2span.json via topo_path/eqpt_path."""
     model = _toy_model_legacy()
     store = QoTResultStore()
     loading = LoadingState(channels=(Channel(193.4e12, 100e9, None, MODE),))
     state, _ = compute_qot(model=model, store=store, oms_sequence=("oms_leg",),
                            direction=Direction.FORWARD, mode_id=MODE, loading=loading,
-                           topo_path=TOY)
+                           topo_path=TOY, eqpt_path=EQPT)
     return state.gsnr_db
 
 

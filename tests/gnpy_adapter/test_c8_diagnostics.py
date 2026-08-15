@@ -29,7 +29,6 @@ from multilayer_optical_mcp.gnpy_adapter.adapter import (
 from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_mcp.gnpy_adapter.synthesize import build_gnpy_network
 from multilayer_optical_mcp.gnpy_adapter.translate import (
-    DEFAULT_EQPT,
     load_toy,
     resolve_oms_path_to_uids,
 )
@@ -39,7 +38,7 @@ from multilayer_optical_mcp.model.network import NetworkModel  # noqa: F401
 from multilayer_optical_mcp.model.qot_results import QoTResultStore
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 
-from tests.gnpy_adapter.test_ground_truth_bridge import TOY
+from tests.gnpy_adapter.test_ground_truth_bridge import EQPT, TOY
 
 MODE = "400G@7.1dB"
 
@@ -114,7 +113,7 @@ def test_launch_transceiver_found_on_synthesized_topology():
 
 
 def test_launch_transceiver_found_on_toy_json_topology():
-    _eqpt, network = load_toy(eqpt_path=DEFAULT_EQPT, topo_path=TOY)
+    _eqpt, network = load_toy(eqpt_path=EQPT, topo_path=TOY)
     by_uid = {n.uid: n for n in network.nodes}
     # The toy path's first element is the add ROADM; its Transceiver predecessor
     # is the launch transponder ("trx A" in toy_2span.json).

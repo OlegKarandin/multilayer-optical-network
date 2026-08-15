@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+import multilayer_optical_mcp
 from multilayer_optical_mcp.model.assets import ROADM, FiberType, Fiber, Amplifier, OMS, TransceiverMode, Direction
 from multilayer_optical_mcp.model.ip_assets import Router
 from multilayer_optical_mcp.gnpy_adapter.loading import LoadingState
@@ -314,7 +315,7 @@ def test_protection_constraints_produce_srlg_disjoint_protected_service():
 
 # ------------------------------------------------ real-adapter end-to-end (opt-in)
 
-_REPO = Path(__file__).resolve().parents[2]
+_DATA = Path(multilayer_optical_mcp.__file__).resolve().parent / "data"
 
 
 @pytest.mark.skipif(
@@ -327,8 +328,8 @@ def test_german_17_end_to_end_real_adapter():
     from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
     from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
 
-    graph = json.loads((_REPO / "topologies/german_17.json").read_text(encoding="utf-8"))
-    modes = load_modulation_formats(_REPO / "modulation_formats.yaml")
+    graph = json.loads((_DATA / "german_17.json").read_text(encoding="utf-8"))
+    modes = load_modulation_formats(_DATA / "modulation_formats.yaml")
     model = model_from_abstract_graph(graph, modes=modes)
     store = QoTResultStore()
     # Share one content-addressed cache across the whole convergence loop: the

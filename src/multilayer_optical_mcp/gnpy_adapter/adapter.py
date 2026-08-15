@@ -31,8 +31,6 @@ from ..model.qot_results import QoTResultStore, QoTCache
 from .bands import SI_BAND
 from .loading import Channel, LoadingState
 from .translate import (
-    DEFAULT_EQPT,
-    DEFAULT_TOPO,
     build_si_for_loading,
     load_toy,
     resolve_oms_path_to_uids,
@@ -253,8 +251,7 @@ def _propagate_loading(
     # ------------------------------------------------------------------ setup
     from .synthesize import build_gnpy_network, gnpy_design_network
     if topo_path is not None or eqpt_path is not None:
-        eqpt, network = load_toy(eqpt_path=eqpt_path or DEFAULT_EQPT,
-                                 topo_path=topo_path or DEFAULT_TOPO)
+        eqpt, network = load_toy(eqpt_path=eqpt_path, topo_path=topo_path)
         gnpy_design_network(network, eqpt)
     else:
         eqpt, network = build_gnpy_network(model)

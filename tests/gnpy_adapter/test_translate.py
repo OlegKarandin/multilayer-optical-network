@@ -3,8 +3,8 @@ from multilayer_optical_mcp.gnpy_adapter.translate import load_toy
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-EQPT = REPO_ROOT / "eqpt" / "eqpt_config.json"
-TOPO = REPO_ROOT / "topologies" / "toy_2span.json"
+EQPT = REPO_ROOT / "tests" / "fixtures" / "eqpt" / "eqpt_config.json"
+TOPO = REPO_ROOT / "tests" / "fixtures" / "toy_2span.json"
 
 
 def test_toy_topology_loads_with_advanced_amp_model():
