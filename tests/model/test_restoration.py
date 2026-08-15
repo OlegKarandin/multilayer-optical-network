@@ -1,14 +1,14 @@
 # tests/model/test_restoration.py
 """compute_restoration: per-service recovery over survivors. Read-only; emits
 typed candidates (full + degraded); status solution/partial/no_solution."""
-from multilayer_optical_mcp.model.assets import ROADM
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.restoration import compute_restoration
+from multilayer_optical_network.model.assets import ROADM
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, Lightpath, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.restoration import compute_restoration
 
 
 class FakeQot:
@@ -138,8 +138,8 @@ def test_cross_bucket_dedup_ignores_wavelength(monkeypatch):
     so the fake is installed on placement_common's binding of place_demands,
     where the shared harvest now lives (restoration itself no longer imports it
     directly, and neither does route_service anymore)."""
-    from multilayer_optical_mcp.model import placement_common as PC
-    from multilayer_optical_mcp.model.multilayer_graph import Placement, NewLightpathRun
+    from multilayer_optical_network.model import placement_common as PC
+    from multilayer_optical_network.model.multilayer_graph import Placement, NewLightpathRun
 
     def _fake_place(model, g, qot, *, src, dst, demand_gbps, policy, k=8,
                     fill_policy=None, grid=None):

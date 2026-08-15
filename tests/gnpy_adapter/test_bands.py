@@ -1,6 +1,6 @@
 import pytest
 
-from multilayer_optical_mcp.gnpy_adapter.bands import (
+from multilayer_optical_network.gnpy_adapter.bands import (
     Band, AMP_BAND, SI_BAND, TRANSCEIVER_BAND,
 )
 
@@ -54,8 +54,8 @@ def test_amp_guard_covers_half_the_default_grid_spacing():
     (gnpy/core/info.py:396-399). A future change to either the grid spacing
     or this guard that breaks the relationship must fail here, not silently
     drop a channel again."""
-    from multilayer_optical_mcp.model.spectrum import SpectrumGrid
-    from multilayer_optical_mcp.gnpy_adapter.bands import _AMP_GUARD_HZ
+    from multilayer_optical_network.model.spectrum import SpectrumGrid
+    from multilayer_optical_network.gnpy_adapter.bands import _AMP_GUARD_HZ
     grid = SpectrumGrid.default()
     assert _AMP_GUARD_HZ >= grid.spacing_hz / 2
 
@@ -65,7 +65,7 @@ def test_amp_band_covers_the_top_grid_slot_exactly():
     channels at 100 GHz tile SI_BAND with zero slack) — its occupied band
     (+-50 GHz) must fit inside AMP_BAND under GNPy's INCLUSIVE is_in_band
     check (>=/<=), not just approximately."""
-    from multilayer_optical_mcp.model.spectrum import SpectrumGrid
+    from multilayer_optical_network.model.spectrum import SpectrumGrid
     grid = SpectrumGrid.default()
     top_center = grid.freq(grid.num_slots - 1)
     assert top_center == pytest.approx(SI_BAND.f_max_hz)

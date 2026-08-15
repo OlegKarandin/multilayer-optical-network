@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from multilayer_optical_mcp.model.modes import default_modes
-from multilayer_optical_mcp.topology_loader import load_model_from_topology_file
+from multilayer_optical_network.model.modes import default_modes
+from multilayer_optical_network.topology_loader import load_model_from_topology_file
 
 TOPOLOGY = {
     "graph": {

@@ -9,14 +9,14 @@ protected insufficient -> unplaced) against the new AllocationResult shape.
 """
 import pytest
 
-from multilayer_optical_mcp.model.assets import ROADM
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.allocation import solve_allocation, solve_allocation_model
+from multilayer_optical_network.model.assets import ROADM
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.allocation import solve_allocation, solve_allocation_model
 
 
 class FakeQot:
@@ -140,7 +140,7 @@ def test_protected_insufficient_inventory_unplaced():
 def test_solve_allocation_threads_one_grid_through_layered_and_placement(monkeypatch):
     """S7-12 fix: build_layered_graph and place_demands must share one
     SpectrumGrid instance per demand placement."""
-    import multilayer_optical_mcp.model.multilayer_graph as _mg
+    import multilayer_optical_network.model.multilayer_graph as _mg
 
     n = _two_routes()
     seen_grids = []
@@ -163,7 +163,7 @@ def test_pack_records_unplaced_on_service_id_collision():
     """Regression for the audit's Important finding: _pack must not crash
     when a demand id collides with an existing service id -- it must record
     the demand as unplaced with a clear reason."""
-    from multilayer_optical_mcp.model.ip_assets import Service
+    from multilayer_optical_network.model.ip_assets import Service
 
     n = _two_routes()
     n.add_service(Service(id="d1", src_router="r_A", dst_router="r_Z",
@@ -241,12 +241,12 @@ def test_apply_candidate_self_corrects_seed_wiped_by_sibling_run():
     is no longer the contract -- apply_candidate's own return value is
     still provided (and still needed by _pack for the CROSS-DEMAND case,
     see below), but the immediate post-call state is now already correct."""
-    from multilayer_optical_mcp.model.ip_assets import Service
-    from multilayer_optical_mcp.model.multilayer_graph import build_layered_graph
-    from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore
-    from multilayer_optical_mcp.model.spectrum import FillPolicy
-    from multilayer_optical_mcp.model import objective as objective_mod
+    from multilayer_optical_network.model.ip_assets import Service
+    from multilayer_optical_network.model.multilayer_graph import build_layered_graph
+    from multilayer_optical_network.model.allocation import make_adapter_evaluator
+    from multilayer_optical_network.model.qot_results import QoTResultStore
+    from multilayer_optical_network.model.spectrum import FillPolicy
+    from multilayer_optical_network.model import objective as objective_mod
     from tests.model.test_fill_policy import (
         _shared_oms_mesh_model, _runs_using, place_demands,
     )
@@ -305,7 +305,7 @@ def _line_three_node_model():
     provisioning (Task 4's cross-lightpath invalidation) wipes d1's
     just-seeded QoT within one `_pack` run, deterministically, independent of
     any grooming/residual-capacity edge case."""
-    from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+    from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
     graph = {
         "nodes": [{"id": "C"}, {"id": "M"}, {"id": "Z"}],
@@ -320,8 +320,8 @@ def _line_three_node_model():
 def _place_cross_demand_scenario():
     """Runs the real solver on `_line_three_node_model` and returns
     `(result, work, lp_d1, lp_d2)`. Shared by the two tests below."""
-    from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore
+    from multilayer_optical_network.model.allocation import make_adapter_evaluator
+    from multilayer_optical_network.model.qot_results import QoTResultStore
 
     n = _line_three_node_model()
     qot = make_adapter_evaluator(n, QoTResultStore())
@@ -375,7 +375,7 @@ def test_pack_reseed_keeps_total_margin_from_skipping_colocated_lightpath():
     of the two co-located lightpaths from the cross-demand scenario above is
     silently skipped: total_margin must equal the direct sum of both
     lightpaths' own margin_db (there are no other lightpaths in this model)."""
-    from multilayer_optical_mcp.model.objective import evaluate_objective
+    from multilayer_optical_network.model.objective import evaluate_objective
 
     result, work, lp_d1, lp_d2 = _place_cross_demand_scenario()
 
@@ -407,7 +407,7 @@ def test_pack_per_iteration_reseed_lets_later_demand_groom_onto_earlier_lightpat
     carried) -- but only if d1's QoT reads correctly when d3 routes, which
     now happens because the per-iteration re-seed (not just the final,
     post-loop one) fixes d1 immediately after d2's iteration completes."""
-    from multilayer_optical_mcp.model.solvers import SolverStatus
+    from multilayer_optical_network.model.solvers import SolverStatus
 
     n = _line_three_node_model()
     demands = [
@@ -415,8 +415,8 @@ def test_pack_per_iteration_reseed_lets_later_demand_groom_onto_earlier_lightpat
         {"id": "d2", "src": "C", "dst": "M", "demand_gbps": 50.0},
         {"id": "d3", "src": "C", "dst": "Z", "demand_gbps": 10.0},
     ]
-    from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore
+    from multilayer_optical_network.model.allocation import make_adapter_evaluator
+    from multilayer_optical_network.model.qot_results import QoTResultStore
 
     qot = make_adapter_evaluator(n, QoTResultStore())
     result, work = solve_allocation_model(

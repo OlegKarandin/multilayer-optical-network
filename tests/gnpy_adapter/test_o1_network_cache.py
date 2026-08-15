@@ -2,12 +2,12 @@ import tempfile
 from pathlib import Path
 
 
-from multilayer_optical_mcp.gnpy_adapter import synthesize as S
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.gnpy_adapter import synthesize as S
+from multilayer_optical_network.model.assets import (
     Amplifier, Fiber, FiberType, OMS, ROADM, Transceiver, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
 
 MODE = TransceiverMode(id="400G@7.1dB", bitrate_gbps=400.0, required_gsnr_db=7.1,
                        symbol_rate_baud=87.5e9, channel_spacing_hz=100e9)
@@ -58,8 +58,8 @@ def test_build_leaves_no_temp_dirs(monkeypatch):
 
 
 def test_fingerprint_stable_across_qot_mutation():
-    from multilayer_optical_mcp.model.qot import QoTState
-    from multilayer_optical_mcp.model.assets import Lightpath
+    from multilayer_optical_network.model.qot import QoTState
+    from multilayer_optical_network.model.assets import Lightpath
 
     model = _toy_model()
     model.add_lightpath(Lightpath(id="lp0", oms_sequence=("oms_syn",),
@@ -107,7 +107,7 @@ def test_clone_with_unchanged_physical_layer_reuses_cached_network():
     eq1, net1 = S.build_gnpy_network(model)
 
     clone = model.clone()
-    from multilayer_optical_mcp.model.assets import Lightpath
+    from multilayer_optical_network.model.assets import Lightpath
     clone.add_lightpath(Lightpath(id="lp0", oms_sequence=("oms_syn",),
                                   mode_id=MODE.id, center_freq_hz=193.4e12))
     assert S._physical_fingerprint(clone) == S._physical_fingerprint(model)
@@ -132,10 +132,10 @@ def test_clone_with_changed_physical_layer_does_not_reuse_cached_network():
 def test_cached_reuse_matches_fresh_gsnr_no_drift():
     """A heavy loading then a light probe on the SAME (cached) network must give
     the identical probe GSNR a fresh build would — proving effective_gain is reset."""
-    from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
-    from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-    from multilayer_optical_mcp.model.assets import Direction
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore
+    from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
+    from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+    from multilayer_optical_network.model.assets import Direction
+    from multilayer_optical_network.model.qot_results import QoTResultStore
 
     probe = Channel(193.4e12, 100e9, None, MODE.id)
     heavy = LoadingState(channels=tuple(
@@ -164,7 +164,7 @@ def test_cached_reuse_matches_fresh_gsnr_no_drift():
 
 
 def _toy_model_with_lightpaths(n_lp: int) -> NetworkModel:
-    from multilayer_optical_mcp.model.assets import Lightpath
+    from multilayer_optical_network.model.assets import Lightpath
     # recompute_qot_under_loading evaluates BOTH directions per lightpath, and
     # backward QoT requires a physically-separate paired reverse OMS (C2). The
     # plan's forward-only _toy_model has no reverse OMS, so build on the
@@ -182,9 +182,9 @@ def _toy_model_with_lightpaths(n_lp: int) -> NetworkModel:
 
 def test_bulk_recompute_synthesizes_once(monkeypatch):
     import tempfile
-    from multilayer_optical_mcp.gnpy_adapter.adapter import recompute_qot_under_loading
-    from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore
+    from multilayer_optical_network.gnpy_adapter.adapter import recompute_qot_under_loading
+    from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+    from multilayer_optical_network.model.qot_results import QoTResultStore
 
     calls = {"topology": 0}
     real_topology = S.model_to_gnpy_topology

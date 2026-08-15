@@ -1,11 +1,11 @@
 import math
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.model.assets import Direction
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.assets import TransceiverMode
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.model.assets import Direction
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.assets import TransceiverMode
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
 MODE = "400G@7.1dB"
 
@@ -58,7 +58,7 @@ def test_apply_nf_delta_mutates_amp():
 
 def test_failed_assets_isolated_on_branch(tmp_path):
     # branch isolation: marking failed on a branch must not touch the parent.
-    from multilayer_optical_mcp.model.snapshots import SnapshotStore
+    from multilayer_optical_network.model.snapshots import SnapshotStore
     base = _one_edge_model()
     store = SnapshotStore(base)
     sid = store.create()
@@ -72,11 +72,11 @@ def test_failed_assets_isolated_on_branch(tmp_path):
 # Task 3: loading_from_model + margin_threshold_sweep
 # ---------------------------------------------------------------------------
 
-from multilayer_optical_mcp.model.whatif import (
+from multilayer_optical_network.model.whatif import (
     loading_from_model, margin_threshold_sweep, MarginSweepRow,
 )
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.qot import QoTState
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.qot import QoTState
 
 
 def _model_with_two_lightpaths():
@@ -117,7 +117,7 @@ def test_sweep_excludes_well_margined():
 # ---------------------------------------------------------------------------
 
 import math as _math
-from multilayer_optical_mcp.model.whatif import inject_failure
+from multilayer_optical_network.model.whatif import inject_failure
 
 
 def test_inject_failure_downs_crossing_lightpath():
@@ -142,7 +142,7 @@ def test_inject_failure_records_failed_assets():
 # ---------------------------------------------------------------------------
 
 import pytest
-from multilayer_optical_mcp.model.whatif import inject_degradation, DegradationReport
+from multilayer_optical_network.model.whatif import inject_degradation, DegradationReport
 
 
 def _live_model_one_lightpath():
@@ -151,7 +151,7 @@ def _live_model_one_lightpath():
     m.add_lightpath(Lightpath(id="lp0", oms_sequence=("oms_0_1",),
                               mode_id=MODE, center_freq_hz=193.4e12))
     # seed real QoT
-    from multilayer_optical_mcp.gnpy_adapter.adapter import recompute_qot_under_loading
+    from multilayer_optical_network.gnpy_adapter.adapter import recompute_qot_under_loading
     recompute_qot_under_loading(model=m, store=QoTResultStore(),
                                 loading=loading_from_model(m))
     return m
@@ -180,7 +180,7 @@ def test_inject_degradation_unknown_asset_raises():
 # Batch C4 — What-if composition (Stage 8)
 # ---------------------------------------------------------------------------
 
-from multilayer_optical_mcp.gnpy_adapter.adapter import recompute_qot_under_loading
+from multilayer_optical_network.gnpy_adapter.adapter import recompute_qot_under_loading
 
 
 def test_recompute_does_not_resurrect_failed_lightpath():
@@ -280,7 +280,7 @@ def test_clear_failed_keeps_sentinel_while_another_asset_still_failed():
 # whatif_sensitivity
 # ---------------------------------------------------------------------------
 
-from multilayer_optical_mcp.model.whatif import whatif_sensitivity, SensitivityResult
+from multilayer_optical_network.model.whatif import whatif_sensitivity, SensitivityResult
 
 
 def test_sensitivity_flags_the_perturbed_amp_as_dominant():

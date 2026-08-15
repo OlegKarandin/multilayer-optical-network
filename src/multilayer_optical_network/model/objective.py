@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/model/objective.py
+# src/multilayer_optical_network/model/objective.py
 from __future__ import annotations
 
 from dataclasses import dataclass

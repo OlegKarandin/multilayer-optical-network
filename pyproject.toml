@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "multilayer-optical-mcp"
+name = "multilayer-optical-network"
 version = "0.1.0"
-description = "MCP server for multi-layer optical network reasoning (GNPy QoT + IP-over-optical)."
+description = "Deterministic multi-layer optical network model: IP-over-optical topology, GNPy QoT adapter, solvers, and validator. Usable standalone, or as the physical/IP-layer backend behind multilayer-optical-mcp."
 requires-python = ">=3.11"
 readme = "README.md"
 license = "Apache-2.0"
@@ -25,11 +25,11 @@ dependencies = [
 server = ["mcp[cli]>=2.0"]
 # dev pulls in server too: the test suite imports server.py (tests/test_server_*.py,
 # tests/e2e/test_flood_scenario.py), which needs mcp.
-dev = ["multilayer-optical-mcp[server]", "pytest>=8", "pytest-cov>=5", "ruff==0.15.15"]
+dev = ["multilayer-optical-network[server]", "pytest>=8", "pytest-cov>=5", "ruff==0.15.15"]
 
 [project.scripts]
-multilayer-optical-mcp = "multilayer_optical_mcp.server:main"
-multilayer-optical-mcp-build = "multilayer_optical_mcp.build_cli:main"
+multilayer-optical-mcp = "multilayer_optical_network.server:main"
+multilayer-optical-network-build = "multilayer_optical_network.build_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -39,7 +39,7 @@ where = ["src"]
 # every ModeRegistry loads, and the german_17 reference topology used by the
 # scenario builder, traffic generator, and e2e test. (Test-only oracles —
 # eqpt/, toy_2span.json — live under tests/fixtures/ instead; they never ship.)
-multilayer_optical_mcp = ["data/*.yaml", "data/*.json", "py.typed"]
+multilayer_optical_network = ["data/*.yaml", "data/*.json", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

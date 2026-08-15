@@ -20,23 +20,23 @@ import math
 
 from gnpy.core.elements import Transceiver as GnpyTrx
 
-from multilayer_optical_mcp.gnpy_adapter.adapter import (
+from multilayer_optical_network.gnpy_adapter.adapter import (
     _SI_F_MAX_HZ,
     _ensure_min_two_channels,
     _find_launch_transceiver,
     compute_qot,
 )
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.synthesize import build_gnpy_network
-from multilayer_optical_mcp.gnpy_adapter.translate import (
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.synthesize import build_gnpy_network
+from multilayer_optical_network.gnpy_adapter.translate import (
     load_toy,
     resolve_oms_path_to_uids,
 )
-from multilayer_optical_mcp.model.assets import Direction, TransceiverMode
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel  # noqa: F401
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.assets import Direction, TransceiverMode
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel  # noqa: F401
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
 from tests.gnpy_adapter.test_ground_truth_bridge import EQPT, TOY
 

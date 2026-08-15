@@ -9,17 +9,17 @@ to reversed(uids).
 """
 import pytest
 
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import (
     Direction, TransceiverMode, Amplifier, Fiber, FiberType, OMS, ROADM,
     Transceiver
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
-from multilayer_optical_mcp.gnpy_adapter.translate import reverse_oms_sequence
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
+from multilayer_optical_network.gnpy_adapter.translate import reverse_oms_sequence
 
 MODE = "400G@7.1dB"
 LOADING = LoadingState(channels=(Channel(193.4e12, 100e9, None, MODE),))

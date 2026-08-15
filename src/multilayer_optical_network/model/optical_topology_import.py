@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/model/optical_topology_import.py
+# src/multilayer_optical_network/model/optical_topology_import.py
 """Optical-only half of Phase 6a: OpticalNetworkModel <- an abstract node/edge
 graph. Zero IP-layer imports, module scope or otherwise — this is the file a
 downstream, IP-free consumer of the optical model depends on. The IP-layer

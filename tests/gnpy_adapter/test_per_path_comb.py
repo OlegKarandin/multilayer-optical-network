@@ -8,11 +8,11 @@ Two consequences of the old global comb are fixed:
     two carriers at the same frequency in one SpectralInformation
     (slot_width = f[1]-f[0] = 0).
 """
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.whatif import loading_from_model
-from multilayer_optical_mcp.gnpy_adapter.adapter import recompute_qot_under_loading
-from multilayer_optical_mcp.testing import MODE, ROUTE1, ROUTE2, _diamond_model
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.whatif import loading_from_model
+from multilayer_optical_network.gnpy_adapter.adapter import recompute_qot_under_loading
+from multilayer_optical_network.testing import MODE, ROUTE1, ROUTE2, _diamond_model
 
 
 def _gsnr_of_lp1(add_disjoint_lp2: bool, lp2_freq_hz: float = 193.5e12) -> float:

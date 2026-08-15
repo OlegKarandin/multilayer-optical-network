@@ -6,12 +6,12 @@ invalidation logic — a mutated span yields a different key, so inject_degradat
 automatically misses and recomputes while disjoint paths keep hitting. The one
 load-bearing invariant is fingerprint completeness, verified directly here.
 """
-import multilayer_optical_mcp.gnpy_adapter.synthesize as synth
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.model.assets import Direction
-from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
-from multilayer_optical_mcp.testing import new_model, add_bidir_span
+import multilayer_optical_network.gnpy_adapter.synthesize as synth
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.model.assets import Direction
+from multilayer_optical_network.model.qot_results import QoTResultStore, QoTCache
+from multilayer_optical_network.testing import new_model, add_bidir_span
 
 _FREQ = 193.4e12
 
@@ -114,7 +114,7 @@ def test_degradation_invalidates_only_the_touched_path(monkeypatch):
 def test_adapter_evaluator_shares_cache(monkeypatch):
     """The acceptance seam threads the cache: two evaluator calls with the same
     inputs recompute once."""
-    from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
+    from multilayer_optical_network.model.allocation import make_adapter_evaluator
     calls = _spy(monkeypatch)
     m = new_model(); add_bidir_span(m, "A", "B", "oms1")
     store, cache = QoTResultStore(), QoTCache()
@@ -127,8 +127,8 @@ def test_adapter_evaluator_shares_cache(monkeypatch):
 def test_recompute_under_loading_threads_cache(monkeypatch):
     """The operating recompute threads the cache too, so acceptance and settle can
     share one cache (both stay on the ACTUAL loading — see the fill-policy plan)."""
-    from multilayer_optical_mcp.gnpy_adapter.adapter import recompute_qot_under_loading
-    from multilayer_optical_mcp.model.assets import Lightpath
+    from multilayer_optical_network.gnpy_adapter.adapter import recompute_qot_under_loading
+    from multilayer_optical_network.model.assets import Lightpath
     calls = _spy(monkeypatch)
     m = new_model(); add_bidir_span(m, "A", "B", "oms1")
     m.add_lightpath(Lightpath(id="lp1", oms_sequence=("oms1",), mode_id="400G",

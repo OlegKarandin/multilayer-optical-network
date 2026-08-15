@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from multilayer_optical_mcp.model.optical_topology_import import (
+from multilayer_optical_network.model.optical_topology_import import (
     optical_model_from_abstract_graph,
     split_link_into_spans,
 )
@@ -31,8 +31,8 @@ def test_split_respects_min_span():
 
 
 def _reg():
-    from multilayer_optical_mcp.model.assets import TransceiverMode
-    from multilayer_optical_mcp.model.modes import ModeRegistry
+    from multilayer_optical_network.model.assets import TransceiverMode
+    from multilayer_optical_network.model.modes import ModeRegistry
 
     return ModeRegistry([
         TransceiverMode(id="400G@7.1dB", bitrate_gbps=400.0, required_gsnr_db=7.1,
@@ -58,9 +58,9 @@ def test_optical_model_from_abstract_graph_matches_optical_half_of_full_build():
     """optical_model_from_abstract_graph must build the exact same optical layer
     as model_from_abstract_graph (same populate_optical call), just on a bare
     OpticalNetworkModel with no routers attached."""
-    from multilayer_optical_mcp.model.network import NetworkModel
-    from multilayer_optical_mcp.model.optical_network import OpticalNetworkModel
-    from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+    from multilayer_optical_network.model.network import NetworkModel
+    from multilayer_optical_network.model.optical_network import OpticalNetworkModel
+    from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
     graph = _tiny_graph()
     optical = optical_model_from_abstract_graph(graph, modes=_reg())
@@ -85,13 +85,13 @@ def test_optical_model_from_abstract_graph_imports_without_ip_layer():
     anywhere, module scope or lazy. In-process this is meaningless (pytest has
     already imported everything)."""
     code = (
-        "import multilayer_optical_mcp.model.optical_topology_import as oti;"
+        "import multilayer_optical_network.model.optical_topology_import as oti;"
         "import sys;"
         "bad=[m for m in sys.modules "
         "if m.endswith(('.ip_assets','.network','.ip_routing'))];"
         "assert not bad, bad;"
-        "from multilayer_optical_mcp.model.modes import ModeRegistry;"
-        "from multilayer_optical_mcp.model.assets import TransceiverMode;"
+        "from multilayer_optical_network.model.modes import ModeRegistry;"
+        "from multilayer_optical_network.model.assets import TransceiverMode;"
         "reg = ModeRegistry([TransceiverMode(id='400G@7.1dB', bitrate_gbps=400.0, "
         "required_gsnr_db=7.1, symbol_rate_baud=87.5e9, channel_spacing_hz=100e9)]);"
         "graph = {'nodes': [{'id': 0}, {'id': 1}], 'edges': [{'src': 0, 'dst': 1, "
@@ -103,8 +103,8 @@ def test_optical_model_from_abstract_graph_imports_without_ip_layer():
         "if m.endswith(('.ip_assets','.network','.ip_routing'))];"
         "assert not bad2, bad2"
     )
-    import multilayer_optical_mcp
-    src_root = str(Path(multilayer_optical_mcp.__file__).resolve().parents[1])
+    import multilayer_optical_network
+    src_root = str(Path(multilayer_optical_network.__file__).resolve().parents[1])
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join(
         [src_root] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])

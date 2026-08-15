@@ -17,24 +17,24 @@ convention throughout, except the explicit MCP-tool-layer check at the end
 """
 from __future__ import annotations
 
-from multilayer_optical_mcp.model import objective
-from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
-from multilayer_optical_mcp.model.ip_assets import Service
-from multilayer_optical_mcp.model.commit import commit_plan, reconcile
-from multilayer_optical_mcp.model.exposure import (
+from multilayer_optical_network.model import objective
+from multilayer_optical_network.model.allocation import make_adapter_evaluator
+from multilayer_optical_network.model.ip_assets import Service
+from multilayer_optical_network.model.commit import commit_plan, reconcile
+from multilayer_optical_network.model.exposure import (
     compute_exposure, oms_seq_asset_set, service_asset_set,
 )
-from multilayer_optical_mcp.model.ip_routing import simulate_ip_routing
-from multilayer_optical_mcp.model.plan import (
+from multilayer_optical_network.model.ip_routing import simulate_ip_routing
+from multilayer_optical_network.model.plan import (
     Plan, ProvisionLightpath, RerouteService, apply_op, service_oms_sequence,
 )
-from multilayer_optical_mcp.model.qot_results import QoTCache, QoTResultStore
-from multilayer_optical_mcp.model.route_service import route_service
-from multilayer_optical_mcp.model.snapshots import SnapshotStore
-from multilayer_optical_mcp.model.solvers import SolverStatus, check_disjointness
-from multilayer_optical_mcp.model.validate import ViolationType, validate_plan
-from multilayer_optical_mcp.model.whatif import inject_failure
-from multilayer_optical_mcp.server import build_app
+from multilayer_optical_network.model.qot_results import QoTCache, QoTResultStore
+from multilayer_optical_network.model.route_service import route_service
+from multilayer_optical_network.model.snapshots import SnapshotStore
+from multilayer_optical_network.model.solvers import SolverStatus, check_disjointness
+from multilayer_optical_network.model.validate import ViolationType, validate_plan
+from multilayer_optical_network.model.whatif import inject_failure
+from multilayer_optical_network.server import build_app
 from tests.conftest import call_tool
 
 

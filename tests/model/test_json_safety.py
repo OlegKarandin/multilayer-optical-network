@@ -1,5 +1,5 @@
 
-from multilayer_optical_mcp.model.json_safety import safe_float
+from multilayer_optical_network.model.json_safety import safe_float
 
 
 def test_finite_float_passes_through():

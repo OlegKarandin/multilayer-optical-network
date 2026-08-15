@@ -11,21 +11,21 @@ import time
 
 import pytest
 
-from multilayer_optical_mcp.data import reference_topology
-from multilayer_optical_mcp.model.assets import ROADM, FiberType, Fiber, Amplifier, OMS, TransceiverMode, Direction
-from multilayer_optical_mcp.model.ip_assets import Router
-from multilayer_optical_mcp.gnpy_adapter.loading import LoadingState
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.allocation import (
+from multilayer_optical_network.data import reference_topology
+from multilayer_optical_network.model.assets import ROADM, FiberType, Fiber, Amplifier, OMS, TransceiverMode, Direction
+from multilayer_optical_network.model.ip_assets import Router
+from multilayer_optical_network.gnpy_adapter.loading import LoadingState
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.allocation import (
     solve_allocation, solve_allocation_model,
 )
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.model.ip_routing import simulate_ip_routing
-from multilayer_optical_mcp.model import scenario
-from multilayer_optical_mcp.model.scenario import build_operating_network
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.ip_routing import simulate_ip_routing
+from multilayer_optical_network.model import scenario
+from multilayer_optical_network.model.scenario import build_operating_network
 
 
 class FakeQot:
@@ -168,7 +168,7 @@ def test_materialized_baseline_has_no_drops(built):
 
 # ------------------------------------------------------ real unplaced reasons
 
-from multilayer_optical_mcp.model.scenario import _limit_from_reasons
+from multilayer_optical_network.model.scenario import _limit_from_reasons
 
 
 def test_limit_from_reasons_maps_disjointness_not_inventory():
@@ -280,8 +280,8 @@ def test_protection_constraints_produce_srlg_disjoint_protected_service():
     at build time must route the packer around it -- the exact design-time
     precondition CLAUDE.md's scenario 1 depends on (SRLG-disjoint now,
     risk-group-correlated later)."""
-    from multilayer_optical_mcp.model.assets import SRLG
-    from multilayer_optical_mcp.model.solvers import check_disjointness
+    from multilayer_optical_network.model.assets import SRLG
+    from multilayer_optical_network.model.solvers import check_disjointness
 
     m = _triangle()
     # Every pair of the triangle's three OMS shares node 0's ROADM by
@@ -321,9 +321,9 @@ def test_protection_constraints_produce_srlg_disjoint_protected_service():
 def test_german_17_end_to_end_real_adapter():
     """Full build against the real GNPy adapter: gravity demands → packer →
     materialized clone → QoT settle. Opt-in (slow)."""
-    from multilayer_optical_mcp.model.modes import default_modes
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
-    from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
+    from multilayer_optical_network.model.modes import default_modes
+    from multilayer_optical_network.model.qot_results import QoTResultStore, QoTCache
+    from multilayer_optical_network.model.allocation import make_adapter_evaluator
 
     graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))
     modes = default_modes()

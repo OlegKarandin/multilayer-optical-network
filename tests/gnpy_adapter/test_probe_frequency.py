@@ -6,12 +6,12 @@ same-mode lightpath at the first matching channel's frequency, so all same-mode
 lightpaths returned identical QoT. compute_qot / recompute_qot_under_loading
 must probe each lightpath at its own center_freq_hz.
 """
-from multilayer_optical_mcp.model.assets import Direction, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.adapter import (
+from multilayer_optical_network.model.assets import Direction, Lightpath, TransceiverMode
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.adapter import (
     compute_qot, recompute_qot_under_loading,
 )
 

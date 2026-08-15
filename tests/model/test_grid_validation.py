@@ -2,12 +2,12 @@
 center_freq_hz against it at add-time (via grid.slot_of) instead of letting an
 off-grid frequency surface only at build_spectrum_state (routing time)."""
 import pytest
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.spectrum import SpectrumGrid
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.spectrum import SpectrumGrid
 
 
 def _base(grid=None) -> NetworkModel:

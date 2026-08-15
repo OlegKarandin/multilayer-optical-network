@@ -1,9 +1,9 @@
 
-from multilayer_optical_mcp.server import build_app
-from multilayer_optical_mcp.model.assets import FiberType
-from multilayer_optical_mcp.model.ip_assets import Router, Service
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.testing import add_bidir_span
+from multilayer_optical_network.server import build_app
+from multilayer_optical_network.model.assets import FiberType
+from multilayer_optical_network.model.ip_assets import Router, Service
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.testing import add_bidir_span
 from tests.conftest import call_tool
 
 
@@ -247,7 +247,7 @@ def test_validate_plan_tool_labels_internal_error_distinctly(monkeypatch):
     def _boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("multilayer_optical_mcp.model.validate.validate_plan", _boom)
+    monkeypatch.setattr("multilayer_optical_network.model.validate.validate_plan", _boom)
     app = build_app()
     _seed(app)
     plan = {"ops": [{"op": "provision_lightpath",
@@ -266,7 +266,7 @@ def test_provision_lightpath_tool_labels_internal_error_distinctly(monkeypatch):
     def _boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("multilayer_optical_mcp.model.validate.validate_plan", _boom)
+    monkeypatch.setattr("multilayer_optical_network.model.validate.validate_plan", _boom)
     app = build_app()
     n = _seed(app)
     out = call_tool(app, "provision_lightpath",
@@ -287,7 +287,7 @@ def test_commit_plan_tool_labels_internal_error_distinctly(monkeypatch):
     def _boom(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("multilayer_optical_mcp.model.plan.plan_from_dict", _boom)
+    monkeypatch.setattr("multilayer_optical_network.model.plan.plan_from_dict", _boom)
     app = build_app()
     _seed(app)
     plan = {"ops": [{"op": "provision_lightpath",
@@ -302,7 +302,7 @@ def test_provision_lightpath_tool_seeds_qot_so_solvers_do_not_crash():
     """Regression for the audit's Critical finding: after a live
     provision_lightpath call, build_layered_graph/route_service/
     compute_restoration/solve_allocation must not raise LookupError."""
-    from multilayer_optical_mcp.model.multilayer_graph import build_layered_graph
+    from multilayer_optical_network.model.multilayer_graph import build_layered_graph
     app = build_app()
     _seed(app)
     call_tool(app, "provision_lightpath",

@@ -1,4 +1,4 @@
-# src/multilayer_optical_mcp/build_cli.py
+# src/multilayer_optical_network/build_cli.py
 """Offline operating-network builder: topology in, state file out.
 
 Separate from the server entry point on purpose. This is a batch job -- minutes
@@ -27,7 +27,7 @@ from .topology_loader import load_model_from_topology_file
 
 def _parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="multilayer-optical-mcp-build",
+        prog="multilayer-optical-network-build",
         description="Build a loaded operating network and write it to a state "
                     "file for `multilayer-optical-mcp --topology … --state …`.")
     p.add_argument("--topology", required=True, help="Topology JSON to build on")

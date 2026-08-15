@@ -1,8 +1,8 @@
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.adapter import _ensure_min_two_channels
-from multilayer_optical_mcp.server import build_app
-from multilayer_optical_mcp.testing import MODE, ROUTE1, ROUTE2, _diamond_model, _model_with_lightpath
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.adapter import _ensure_min_two_channels
+from multilayer_optical_network.server import build_app
+from multilayer_optical_network.testing import MODE, ROUTE1, ROUTE2, _diamond_model, _model_with_lightpath
 from tests.conftest import call_tool
 
 

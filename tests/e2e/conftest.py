@@ -9,12 +9,12 @@ import os
 
 import pytest
 
-from multilayer_optical_mcp.data import reference_topology
-from multilayer_optical_mcp.model.modes import default_modes
-from multilayer_optical_mcp.model.qot_results import QoTResultStore, QoTCache
-from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
-from multilayer_optical_mcp.model.scenario import build_operating_network
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.data import reference_topology
+from multilayer_optical_network.model.modes import default_modes
+from multilayer_optical_network.model.qot_results import QoTResultStore, QoTCache
+from multilayer_optical_network.model.allocation import make_adapter_evaluator
+from multilayer_optical_network.model.scenario import build_operating_network
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 
 
 @pytest.fixture(scope="session")

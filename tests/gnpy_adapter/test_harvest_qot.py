@@ -2,11 +2,11 @@ import math
 
 import pytest
 
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot, harvest_qot
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.model.assets import Direction
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.spectrum import SpectrumGrid
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot, harvest_qot
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.model.assets import Direction
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.spectrum import SpectrumGrid
 from tests.gnpy_adapter.test_compute_qot import _toy_model
 
 MODE = "400G@7.1dB"

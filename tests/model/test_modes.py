@@ -1,8 +1,8 @@
 import pytest
-from multilayer_optical_mcp.model.modes import (
+from multilayer_optical_network.model.modes import (
     ModeRegistry, default_modes, load_modulation_formats,
 )
-from multilayer_optical_mcp.model.assets import TransceiverMode
+from multilayer_optical_network.model.assets import TransceiverMode
 
 
 def test_registry_lookup_and_list():

@@ -1,4 +1,4 @@
-from multilayer_optical_mcp.gnpy_adapter.translate import load_toy
+from multilayer_optical_network.gnpy_adapter.translate import load_toy
 
 from tests.conftest import FIXTURES_DIR
 
@@ -19,13 +19,13 @@ def test_toy_topology_loads_with_advanced_amp_model():
 # Task 11: OMS→uids resolver + LoadingState→SI builder
 # ---------------------------------------------------------------------------
 
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import (
     FiberType, Amplifier, OMS, ROADM, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.gnpy_adapter.translate import (
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.gnpy_adapter.translate import (
     build_si_for_loading, resolve_oms_path_to_uids,
 )
 

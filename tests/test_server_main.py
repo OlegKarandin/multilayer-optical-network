@@ -3,9 +3,9 @@ import sys
 
 import pytest
 
-from multilayer_optical_mcp import server
-from multilayer_optical_mcp.state_file import dump_state, topology_fingerprint
-from multilayer_optical_mcp.testing import TOPOLOGY, _built
+from multilayer_optical_network import server
+from multilayer_optical_network.state_file import dump_state, topology_fingerprint
+from multilayer_optical_network.testing import TOPOLOGY, _built
 
 
 def test_server_main_rejects_state_without_topology(monkeypatch, capsys):

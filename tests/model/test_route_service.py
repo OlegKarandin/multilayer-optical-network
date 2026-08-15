@@ -4,15 +4,15 @@ and disjoint-pair menu (protected). Read-only; scores via objective.score_candid
 / score_pair on throwaway clones; ground truth untouched."""
 import pytest
 
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.multilayer_graph import Placement, NewLightpathRun
-from multilayer_optical_mcp.model.objective import placement_materializable
-from multilayer_optical_mcp.model.route_service import route_service
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, Lightpath, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.multilayer_graph import Placement, NewLightpathRun
+from multilayer_optical_network.model.objective import placement_materializable
+from multilayer_optical_network.model.route_service import route_service
 
 
 class FakeQot:
@@ -308,7 +308,7 @@ def test_route_service_threads_one_grid_through_layered_and_placement(monkeypatc
     """S7-12 fix: build_layered_graph and place_demands must share one
     SpectrumGrid instance per route_service call, not two independently
     defaulted ones that could desync if a non-default grid were ever used."""
-    import multilayer_optical_mcp.model.multilayer_graph as _mg
+    import multilayer_optical_network.model.multilayer_graph as _mg
 
     n = _empty_net_model()
     seen_grids = []
@@ -332,8 +332,8 @@ def test_unprotected_scoring_planerror_is_dropped_not_raised(diamond_service, mo
     # the fix, nothing between here and the MCP boundary caught this, so a
     # single unscoreable candidate crashed the whole call instead of just being
     # dropped from the menu.
-    import multilayer_optical_mcp.model.route_service as rs_mod
-    from multilayer_optical_mcp.model.plan import PlanError
+    import multilayer_optical_network.model.route_service as rs_mod
+    from multilayer_optical_network.model.plan import PlanError
 
     model, svc = diamond_service
 
@@ -348,8 +348,8 @@ def test_unprotected_scoring_planerror_is_dropped_not_raised(diamond_service, mo
 
 
 def test_protected_scoring_planerror_is_dropped_not_raised(diamond_service_two_routes, monkeypatch):
-    import multilayer_optical_mcp.model.route_service as rs_mod
-    from multilayer_optical_mcp.model.plan import PlanError
+    import multilayer_optical_network.model.route_service as rs_mod
+    from multilayer_optical_network.model.plan import PlanError
 
     model, svc = diamond_service_two_routes
 

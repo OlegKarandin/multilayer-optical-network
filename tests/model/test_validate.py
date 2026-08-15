@@ -2,20 +2,20 @@ from dataclasses import replace
 
 import pytest
 
-from multilayer_optical_mcp.model.assets import Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import IPLink, Router, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.plan import (
+from multilayer_optical_network.model.assets import Lightpath, TransceiverMode
+from multilayer_optical_network.model.ip_assets import IPLink, Router, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.plan import (
     Plan, ProvisionLightpath, RerouteService, SetModulationFormat, TeardownLightpath,
 )
-from multilayer_optical_mcp.model.validate import (
+from multilayer_optical_network.model.validate import (
     validate_plan, ViolationType,
     _mode_infeasible_findings, _protection_viability_findings,
     _disjointness_findings, _protection_oversubscription_findings,
 )
-from multilayer_optical_mcp.testing import new_model, add_bidir_span
+from multilayer_optical_network.testing import new_model, add_bidir_span
 
 
 def _ip_over_optical(margin_db=2.0, demand=300.0):
@@ -327,7 +327,7 @@ def test_recompute_failure_does_not_escape_validate_plan(monkeypatch):
     # and even where an outer try/except caught it (server.py's tool boundary),
     # it was mistagged as INVALID_PLAN ("the plan is malformed"), which isn't
     # what happened: the plan was fine, the QoT recompute itself failed.
-    import multilayer_optical_mcp.model.validate as validate_mod
+    import multilayer_optical_network.model.validate as validate_mod
 
     def _boom(**kwargs):
         raise RuntimeError("adapter blew up")

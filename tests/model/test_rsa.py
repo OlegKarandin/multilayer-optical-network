@@ -4,15 +4,15 @@ Placement combinatorics use a deterministic fake QotEvaluator so the routing /
 spectrum / mode logic is exercised without paying GNPy per case; the real-GNPy
 integration case for this seam lives in tests/gnpy_adapter/test_ground_truth_bridge.py.
 """
-from multilayer_optical_mcp.model.assets import ROADM
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import ROADM
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, SRLG, TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.allocation import solve_rsa
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.allocation import solve_rsa
 
 
 # --------------------------------------------------------------- fakes / fixtures
@@ -150,9 +150,9 @@ def test_real_gnpy_integration_places_with_adapter_mode():
     Routes go through distinct intermediate nodes (A-M-Z / A-N-Z) so every OMS
     has a unique (src,dst) and its paired reverse OMS resolves unambiguously."""
     import math
-    from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-    from multilayer_optical_mcp.model.allocation import make_adapter_evaluator
-    from multilayer_optical_mcp.model.qot_results import QoTResultStore
+    from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+    from multilayer_optical_network.model.allocation import make_adapter_evaluator
+    from multilayer_optical_network.model.qot_results import QoTResultStore
 
     graph = {
         "nodes": [{"id": "A"}, {"id": "M"}, {"id": "N"}, {"id": "Z"}],

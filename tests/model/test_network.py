@@ -1,8 +1,8 @@
 import pytest
-from multilayer_optical_mcp.model.assets import Fiber, FiberType, Amplifier, Lightpath, OMS, ROADM, Transceiver, TransceiverMode, SRLG
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
+from multilayer_optical_network.model.assets import Fiber, FiberType, Amplifier, Lightpath, OMS, ROADM, Transceiver, TransceiverMode, SRLG
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
 
 
 def _registry():
@@ -47,7 +47,7 @@ def test_optical_node_shadow_registry_is_gone():
     # S1-6: the OpticalNode class and its _optical_nodes registry were written,
     # cloned, and never read. Lock the removal so nobody resurrects a second,
     # perpetually-drifting node store alongside _roadms/_transceivers.
-    import multilayer_optical_mcp.model.assets as assets
+    import multilayer_optical_network.model.assets as assets
     assert not hasattr(assets, "OpticalNode")
     n = _bare()
     assert not hasattr(n, "add_optical_node")

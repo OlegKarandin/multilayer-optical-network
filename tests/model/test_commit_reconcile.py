@@ -1,10 +1,10 @@
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.ip_assets import IPLink, Router
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.snapshots import SnapshotStore
-from multilayer_optical_mcp.model.plan import Plan, ProvisionLightpath, TeardownLightpath
-from multilayer_optical_mcp.model.commit import commit_plan, reconcile
-from multilayer_optical_mcp.testing import new_model, add_bidir_span
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.ip_assets import IPLink, Router
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.snapshots import SnapshotStore
+from multilayer_optical_network.model.plan import Plan, ProvisionLightpath, TeardownLightpath
+from multilayer_optical_network.model.commit import commit_plan, reconcile
+from multilayer_optical_network.testing import new_model, add_bidir_span
 
 
 def _base():
@@ -68,7 +68,7 @@ def test_partial_commit_then_reconcile_surfaces_drift():
         # the second provision (lpY) "times out" at the control plane
         if isinstance(op, ProvisionLightpath) and op.lightpath.id == "lpY":
             return False
-        from multilayer_optical_mcp.model.plan import apply_op
+        from multilayer_optical_network.model.plan import apply_op
         apply_op(model, op)
         return True
 
@@ -99,11 +99,11 @@ def test_partial_commit_then_reconcile_surfaces_drift():
 def test_reconcile_on_evicted_intended_snapshot_returns_drift_not_raise():
     """Regression for the audit's Important finding: reconcile() must not
     raise a bare KeyError when the intended snapshot was evicted."""
-    from multilayer_optical_mcp.model.network import NetworkModel
-    from multilayer_optical_mcp.model.modes import ModeRegistry
-    from multilayer_optical_mcp.model.assets import TransceiverMode
-    from multilayer_optical_mcp.model.snapshots import SnapshotStore
-    from multilayer_optical_mcp.model.commit import reconcile
+    from multilayer_optical_network.model.network import NetworkModel
+    from multilayer_optical_network.model.modes import ModeRegistry
+    from multilayer_optical_network.model.assets import TransceiverMode
+    from multilayer_optical_network.model.snapshots import SnapshotStore
+    from multilayer_optical_network.model.commit import reconcile
 
     base = NetworkModel(modes=ModeRegistry([TransceiverMode(
         id="400G", bitrate_gbps=400.0, required_gsnr_db=7.1,

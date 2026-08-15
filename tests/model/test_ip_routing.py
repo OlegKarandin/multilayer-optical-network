@@ -1,10 +1,10 @@
 # tests/model/test_ip_routing.py
 import pytest
-from multilayer_optical_mcp.model.assets import FiberType, Amplifier, Fiber, OMS, Lightpath, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router, IPLink, Service
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
+from multilayer_optical_network.model.assets import FiberType, Amplifier, Fiber, OMS, Lightpath, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router, IPLink, Service
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
 
 
 def _two_link_model():
@@ -59,7 +59,7 @@ def test_ip_links_for_lightpath_unknown_raises():
 
 
 def test_grooming_map_both_directions():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     # One service A->C rides both lightpaths; one service A->B rides only lpAB.
     n.add_service(Service(id="svc-AC", src_router="R-A", dst_router="R-C",
@@ -76,7 +76,7 @@ def test_grooming_map_both_directions():
 
 
 def test_simulate_offered_load_and_utilization():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     n.add_service(Service(id="svc-AC", src_router="R-A", dst_router="R-C",
                           demand_gbps=120.0, working_path=("ipAB", "ipBC")))
@@ -96,7 +96,7 @@ def test_simulate_offered_load_and_utilization():
 
 
 def test_simulate_unrouted_service_carries_no_load():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     n.add_service(Service(id="svc-pending", src_router="R-A", dst_router="R-C",
                           demand_gbps=999.0))  # empty working_path
@@ -105,7 +105,7 @@ def test_simulate_unrouted_service_carries_no_load():
 
 
 def test_simulate_oversubscription_reports_overflow():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     # 260G offered onto a 200G link -> congested, overflow 60, not down.
     n.add_service(Service(id="svc-big", src_router="R-A", dst_router="R-B",
@@ -120,7 +120,7 @@ def test_simulate_oversubscription_reports_overflow():
 
 
 def test_simulate_down_link_drops_its_services():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     n.add_service(Service(id="svc-AC", src_router="R-A", dst_router="R-C",
                           demand_gbps=120.0, working_path=("ipAB", "ipBC")))
@@ -141,7 +141,7 @@ def test_simulate_link_without_qot_is_total_not_raise():
     # S5-4: a lightpath provisioned before recompute has no recorded QoT.
     # simulate_ip_routing is a read tool and must not raise LookupError out of it;
     # the link reports a distinct "unknown" state (capacity None), never down.
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     n.add_lightpath(Lightpath(id="lpX", oms_sequence=("omsAB",),
                               mode_id="200G-16QAM", center_freq_hz=193.6e12))
@@ -162,7 +162,7 @@ def test_simulate_link_without_qot_is_total_not_raise():
 def test_down_links_includes_idle_down_link():
     # S5-5: a down link carrying no traffic is still an outage. down_links must
     # enumerate every down link, not only the loaded ones.
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()  # no services -> both links idle
     n.set_qot_state("lpBC", QoTState(gsnr_db=18.0, osnr_db=20.0, margin_db=-0.5))
     res = ip_routing.simulate_ip_routing(n)
@@ -174,7 +174,7 @@ def test_down_links_includes_idle_down_link():
 
 
 def test_reroute_repins_working_path():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     # Add a direct A->C express link so a reroute target exists.
     n.add_lightpath(Lightpath(id="lpAC", oms_sequence=("omsAB", "omsBC"),
@@ -210,7 +210,7 @@ def test_reroute_rejects_unknown_link():
 
 
 def test_affected_services_by_lightpath_oms_and_fiber():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     n.add_service(Service(id="svc-AC", src_router="R-A", dst_router="R-C",
                           demand_gbps=120.0, working_path=("ipAB", "ipBC")))
@@ -229,7 +229,7 @@ def test_affected_services_by_lightpath_oms_and_fiber():
 
 
 def test_affected_services_includes_protection_path():
-    from multilayer_optical_mcp.model import ip_routing
+    from multilayer_optical_network.model import ip_routing
     n = _two_link_model()
     n.add_lightpath(Lightpath(id="lpAC", oms_sequence=("omsAB", "omsBC"),
                               mode_id="200G-16QAM", center_freq_hz=193.5e12))
@@ -244,12 +244,12 @@ def test_affected_services_includes_protection_path():
 
 
 # --- Phase 7 Task 2: removal + failover-aware routing + 1:1 reservation ---
-from multilayer_optical_mcp.model.assets import Amplifier as _Amp, Fiber as _Fiber, OMS as _OMS, Lightpath as _LP, FiberType as _FT, TransceiverMode as _TM, ROADM
-from multilayer_optical_mcp.model.ip_assets import IPLink as _IPLink, Service as _Svc
-from multilayer_optical_mcp.model.qot import QoTState as _QoT
-from multilayer_optical_mcp.model.modes import ModeRegistry as _MR
-from multilayer_optical_mcp.model.network import NetworkModel as _NM
-from multilayer_optical_mcp.model.ip_routing import simulate_ip_routing as _sim
+from multilayer_optical_network.model.assets import Amplifier as _Amp, Fiber as _Fiber, OMS as _OMS, Lightpath as _LP, FiberType as _FT, TransceiverMode as _TM, ROADM
+from multilayer_optical_network.model.ip_assets import IPLink as _IPLink, Service as _Svc
+from multilayer_optical_network.model.qot import QoTState as _QoT
+from multilayer_optical_network.model.modes import ModeRegistry as _MR
+from multilayer_optical_network.model.network import NetworkModel as _NM
+from multilayer_optical_network.model.ip_routing import simulate_ip_routing as _sim
 
 
 def _model_with_service():
@@ -304,7 +304,7 @@ def test_is_contiguous_path_on_dangling_link_returns_false_not_raise():
     # Regression: is_contiguous_path itself must be safe on a dangling ip_path
     # entry (the documented valid state left by remove_lightpath/
     # remove_ip_link), not just safe-by-convention-of-its-callers.
-    from multilayer_optical_mcp.model.ip_routing import is_contiguous_path
+    from multilayer_optical_network.model.ip_routing import is_contiguous_path
 
     m = _model_with_service()
     m.remove_ip_link("ipAB")   # "ipAB" now dangles
@@ -346,7 +346,7 @@ def test_both_paths_down_drops_service():
 
 
 def test_reserved_capacity_sums_protection_demand():
-    from multilayer_optical_mcp.model.ip_routing import reserved_capacity_per_link
+    from multilayer_optical_network.model.ip_routing import reserved_capacity_per_link
     m = _protected_model()                          # svc reserves 100 on ipCD
     reserved = reserved_capacity_per_link(m)
     assert reserved["ipCD"] == 100.0
@@ -378,8 +378,8 @@ def _disjoint_two_route_topology():
 
 
 def test_solve_allocation_protected_service_fails_over_to_real_protection():
-    from multilayer_optical_mcp.model.allocation import solve_allocation_model
-    from multilayer_optical_mcp.model.solvers import SolverStatus
+    from multilayer_optical_network.model.allocation import solve_allocation_model
+    from multilayer_optical_network.model.solvers import SolverStatus
 
     class _HiQot:
         def __call__(self, *, oms_sequence, direction, mode_id, loading):

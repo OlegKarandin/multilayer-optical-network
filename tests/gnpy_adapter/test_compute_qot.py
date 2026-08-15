@@ -12,9 +12,9 @@ import math
 
 import pytest
 
-from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.gnpy_adapter.adapter import compute_qot
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.model.assets import (
     Amplifier,
     Direction,
     Fiber,
@@ -24,10 +24,10 @@ from multilayer_optical_mcp.model.assets import (
     Transceiver,
     TransceiverMode,
 )
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.testing import _toy_model
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.testing import _toy_model
 
 
 def test_compute_qot_returns_state_and_result_id():
@@ -139,8 +139,8 @@ def test_probe_roll_off_is_sourced_from_mode_not_hardcoded(monkeypatch):
     """S2-4 follow-up: build_si_for_loading's roll_off scalar must come from the
     probed mode's own TransceiverMode.roll_off, not a bare 0.15 literal that
     ignores which mode is being evaluated."""
-    from multilayer_optical_mcp.gnpy_adapter import adapter as _adapter
-    from multilayer_optical_mcp.gnpy_adapter.translate import build_si_for_loading as _real
+    from multilayer_optical_network.gnpy_adapter import adapter as _adapter
+    from multilayer_optical_network.gnpy_adapter.translate import build_si_for_loading as _real
 
     captured = {}
 
@@ -216,7 +216,7 @@ def test_apply_penalties_charges_terminal_roadms_only_at_half_budget():
     """
     from gnpy.core.elements import Roadm as _GnpyRoadm
     from gnpy.core.utils import lin2db, db2lin, snr_sum
-    from multilayer_optical_mcp.gnpy_adapter.adapter import (
+    from multilayer_optical_network.gnpy_adapter.adapter import (
         _propagate_loading, _apply_penalties, _extract_gsnr_osnr,
     )
 

@@ -2,12 +2,12 @@
 _forbidden_assets/_lever, defined-but-only-imported-elsewhere) across
 allocation.py, route_service.py, and restoration.py."""
 
-from multilayer_optical_mcp.model.assets import SRLG
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.multilayer_graph import Placement, NewLightpathRun
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.placement_common import (
+from multilayer_optical_network.model.assets import SRLG
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.multilayer_graph import Placement, NewLightpathRun
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.placement_common import (
     _forbidden_assets, _lever, _status,
 )
 
@@ -75,11 +75,11 @@ def test_status_empty_input_ordering_matches_each_original_caller():
     assert _status(has_any=False, fully_satisfied=False) == SolverStatus.NO_SOLUTION
 
 
-from multilayer_optical_mcp.model.assets import (
+from multilayer_optical_network.model.assets import (
     FiberType, Fiber, Amplifier, OMS, ROADM, TransceiverMode,
 )
-from multilayer_optical_mcp.model.multilayer_graph import build_layered_graph
-from multilayer_optical_mcp.model.placement_common import _harvest_placements
+from multilayer_optical_network.model.multilayer_graph import build_layered_graph
+from multilayer_optical_network.model.placement_common import _harvest_placements
 
 
 def _spanned_model() -> NetworkModel:
@@ -97,7 +97,7 @@ def _spanned_model() -> NetworkModel:
 
 
 def _fake_qot(gsnr_db=22.0):
-    from multilayer_optical_mcp.model.qot import QoTState
+    from multilayer_optical_network.model.qot import QoTState
 
     def _eval(*, oms_sequence, direction, mode_id, loading):
         return QoTState(gsnr_db=gsnr_db, osnr_db=gsnr_db + 2.0,

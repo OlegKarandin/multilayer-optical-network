@@ -3,9 +3,9 @@ solve_allocation, end-to-end through the FastMCP app over the default toy_2span
 gnpy topology (real GNPy). Mirrors test_server_routing.py."""
 from __future__ import annotations
 
-from multilayer_optical_mcp.server import build_app
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, ROADM, OMS, Lightpath, Transceiver
-from multilayer_optical_mcp.model.ip_assets import Router
+from multilayer_optical_network.server import build_app
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, ROADM, OMS, Lightpath, Transceiver
+from multilayer_optical_network.model.ip_assets import Router
 from tests.conftest import call_tool
 
 
@@ -85,7 +85,7 @@ def test_solve_rsa_shares_harvest_cache_across_tool_calls(monkeypatch):
     from scratch. build_app now constructs one HarvestCache and threads it
     through every call; a second identical solve_rsa call should find its
     probe already harvested."""
-    from multilayer_optical_mcp.model.qot_results import HarvestCache
+    from multilayer_optical_network.model.qot_results import HarvestCache
 
     app, _ = _seed_app()
 

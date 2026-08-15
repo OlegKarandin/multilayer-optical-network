@@ -1,5 +1,5 @@
-from multilayer_optical_mcp.model.qot_results import HarvestCache
-from multilayer_optical_mcp.model.qot import QoTState
+from multilayer_optical_network.model.qot_results import HarvestCache
+from multilayer_optical_network.model.qot import QoTState
 
 
 def _vec(g):

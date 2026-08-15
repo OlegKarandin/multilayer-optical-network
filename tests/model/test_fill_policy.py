@@ -8,14 +8,14 @@ untouched (see the plan's acceptance-only decision).
 """
 import pytest
 
-from multilayer_optical_mcp.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, TransceiverMode
-from multilayer_optical_mcp.model.ip_assets import Router
-from multilayer_optical_mcp.model.modes import ModeRegistry
-from multilayer_optical_mcp.model.network import NetworkModel
-from multilayer_optical_mcp.model.qot import QoTState
-from multilayer_optical_mcp.model.solvers import SolverStatus
-from multilayer_optical_mcp.model.spectrum import SpectrumGrid, FillPolicy
-from multilayer_optical_mcp.model.allocation import (
+from multilayer_optical_network.model.assets import FiberType, Fiber, Amplifier, OMS, ROADM, TransceiverMode
+from multilayer_optical_network.model.ip_assets import Router
+from multilayer_optical_network.model.modes import ModeRegistry
+from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.qot import QoTState
+from multilayer_optical_network.model.solvers import SolverStatus
+from multilayer_optical_network.model.spectrum import SpectrumGrid, FillPolicy
+from multilayer_optical_network.model.allocation import (
     _build_loading, solve_rsa, solve_allocation,
 )
 
@@ -137,12 +137,12 @@ def test_solve_allocation_full_is_order_independent():
 # multilayer_graph.place_demands (see its S7-10 comment); this test is the
 # regression.
 
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
-from multilayer_optical_mcp.model.multilayer_graph import build_layered_graph, place_demands
-from multilayer_optical_mcp.model.allocation import make_adapter_evaluator, _best_feasible_mode
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model.multilayer_graph import build_layered_graph, place_demands
+from multilayer_optical_network.model.allocation import make_adapter_evaluator, _best_feasible_mode
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
 
 _S710_MODE = "400G@7.1dB"
 
@@ -226,7 +226,7 @@ def test_actual_colocated_runs_include_each_others_channel():
     run_a, run_b = _runs_using(target, "oms_C_M")
 
     ref_mode = n.modes.list()[0].id
-    from multilayer_optical_mcp.model.spectrum import build_spectrum_state
+    from multilayer_optical_network.model.spectrum import build_spectrum_state
     spectrum = build_spectrum_state(n, grid)
     # run_a's loading as place_demands built it BEFORE the sibling-channel fix
     # (each run QoT'd against the committed spectrum snapshot alone -- what

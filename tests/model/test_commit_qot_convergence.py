@@ -1,16 +1,16 @@
 import pytest
 
-from multilayer_optical_mcp.model.assets import Lightpath
-from multilayer_optical_mcp.model.ip_assets import IPLink, Router
-from multilayer_optical_mcp.model.qot_results import QoTResultStore
-from multilayer_optical_mcp.model.snapshots import SnapshotStore
-from multilayer_optical_mcp.model.plan import (
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.ip_assets import IPLink, Router
+from multilayer_optical_network.model.qot_results import QoTResultStore
+from multilayer_optical_network.model.snapshots import SnapshotStore
+from multilayer_optical_network.model.plan import (
     Plan, ProvisionLightpath, SetModulationFormat, apply_op,
 )
-from multilayer_optical_mcp.model.commit import commit_plan
-from multilayer_optical_mcp.model.validate import recompute_if_possible
-from multilayer_optical_mcp.model.objective import evaluate_objective
-from multilayer_optical_mcp.testing import new_model, add_bidir_span
+from multilayer_optical_network.model.commit import commit_plan
+from multilayer_optical_network.model.validate import recompute_if_possible
+from multilayer_optical_network.model.objective import evaluate_objective
+from multilayer_optical_network.testing import new_model, add_bidir_span
 
 
 def _base():
