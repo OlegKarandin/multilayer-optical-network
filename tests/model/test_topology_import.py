@@ -1,14 +1,13 @@
 import json
-from pathlib import Path
 
 import pytest
 
-import multilayer_optical_mcp
+from multilayer_optical_mcp.data import reference_topology
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 from multilayer_optical_mcp.model.modes import ModeRegistry
 from multilayer_optical_mcp.model.assets import TransceiverMode
 
-GERMAN_17 = Path(multilayer_optical_mcp.__file__).resolve().parent / "data" / "german_17.json"
+GERMAN_17 = reference_topology("german_17")
 
 
 def _reg():
