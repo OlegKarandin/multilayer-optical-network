@@ -1,8 +1,8 @@
 """Gate: a model synthesized to match toy_2span must reproduce load_toy GSNR."""
 import json
 import math
-from pathlib import Path
 
+from multilayer_optical_mcp.data import reference_topology
 from multilayer_optical_mcp.gnpy_adapter.adapter import compute_qot
 from multilayer_optical_mcp.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_mcp.model.assets import (
@@ -13,14 +13,11 @@ from multilayer_optical_mcp.model.network import NetworkModel
 from multilayer_optical_mcp.model.qot_results import QoTResultStore
 from multilayer_optical_mcp.model.topology_import import model_from_abstract_graph
 
-import multilayer_optical_mcp
+from tests.conftest import FIXTURES_DIR
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-TOY = REPO_ROOT / "tests" / "fixtures" / "toy_2span.json"
-EQPT = REPO_ROOT / "tests" / "fixtures" / "eqpt" / "eqpt_config.json"
-GERMAN_17 = (
-    Path(multilayer_optical_mcp.__file__).resolve().parent / "data" / "german_17.json"
-)
+TOY = FIXTURES_DIR / "toy_2span.json"
+EQPT = FIXTURES_DIR / "eqpt" / "eqpt_config.json"
+GERMAN_17 = reference_topology("german_17")
 MODE = "400G@7.1dB"
 TOL_DB = 0.25
 
