@@ -116,7 +116,7 @@ def test_import_rejects_num_spans_count_mismatch():
 
 
 def test_import_german_17_structural_counts():
-    graph = json.loads(GERMAN_17.read_text())
+    graph = json.loads(GERMAN_17.read_text())["graph"]
     n = model_from_abstract_graph(graph, modes=_reg())
     assert len(n.list_oms()) == 2 * len(graph["edges"])
     total_spans = sum(e["num_spans"] for e in graph["edges"])

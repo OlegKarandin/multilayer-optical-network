@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from multilayer_optical_network.data import reference_topology
 from multilayer_optical_network.model.modes import default_modes
 from multilayer_optical_network.topology_loader import load_model_from_topology_file
 
@@ -56,3 +57,14 @@ def test_load_model_from_topology_file_tolerates_utf8_bom(tmp_path: Path):
     modes = default_modes()
     model = load_model_from_topology_file(p, modes=modes)
     assert model.get_fiber("fiber_a_b_0") is not None
+
+
+def test_packaged_german_17_matches_the_wrapped_file_contract():
+    # The packaged reference topology is runtime data consumed by
+    # `multilayer-optical-network-build --topology`, which loads it through
+    # this exact function -- it must satisfy the same {"graph": ...} contract
+    # as every other topology file, not the bare {"nodes", "edges"} shape
+    # some tests pass straight to model_from_abstract_graph.
+    modes = default_modes()
+    model = load_model_from_topology_file(reference_topology("german_17"), modes=modes)
+    assert model.list_oms()

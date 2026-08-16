@@ -117,7 +117,7 @@ def test_generate_demands_reproduces_frozen_german_17_fixture():
     byte-for-byte — the durable, GNPy-free replacement for hand-written demands."""
     fix = json.loads(
         (_REPO / "tests/fixtures/german_17_demands_seed0.json").read_text(encoding="utf-8"))
-    graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))
+    graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))["graph"]
     modes = default_modes()
     model = model_from_abstract_graph(graph, modes=modes)
 

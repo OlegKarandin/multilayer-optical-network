@@ -118,7 +118,7 @@ def test_synthesized_toy_matches_file_loaded_toy():
 
 
 def test_german_17_routed_path_finite_and_monotone():
-    graph = json.loads(GERMAN_17.read_text())
+    graph = json.loads(GERMAN_17.read_text())["graph"]
     model = model_from_abstract_graph(graph, modes=ModeRegistry([_mode()]))
     store = QoTResultStore()
     loading = LoadingState(channels=(Channel(193.4e12, 100e9, None, MODE),))
