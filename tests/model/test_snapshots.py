@@ -179,6 +179,13 @@ def test_create_is_put_of_current():
     assert store.get(sid).get_qot_state("lp1").margin_db == 3.0
 
 
+def test_reap_returns_none():
+    """#4 fix: every call site discards reap()'s return value; make the
+    contract explicit instead of building a tuple nobody reads."""
+    store = SnapshotStore(initial=_seed(), ttl_seconds=10.0)
+    assert store.reap() is None
+
+
 # --- Task 3: TTL reap wiring + ROADM/Transceiver diff keys -----------------
 
 def test_create_reaps_expired_snapshots(monkeypatch):
