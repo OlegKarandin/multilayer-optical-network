@@ -2,7 +2,7 @@ from __future__ import annotations
 import time
 import uuid
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 from .network import NetworkModel
 
 
@@ -16,6 +16,10 @@ class SnapshotStore:
         self._current = initial
         self._snapshots: OrderedDict[str, NetworkModel] = OrderedDict()
         self._created_at: Dict[str, float] = {}
+        if max_snapshots is not None and max_snapshots < 1:
+            raise ValueError(
+                f"max_snapshots must be >= 1 (or None for unbounded), got {max_snapshots!r}"
+            )
         self._max = max_snapshots
         self._ttl = ttl_seconds
         # The id of the snapshot `_current` was branched/restored from -- the
@@ -75,16 +79,15 @@ class SnapshotStore:
         branch()/current() or the returned model's own clone()."""
         return self._snapshots[sid]
 
-    def reap(self) -> Tuple[str, ...]:
+    def reap(self) -> None:
         if self._ttl is None:
-            return ()
+            return
         now = time.monotonic()
         expired = [sid for sid, t in self._created_at.items()
                   if sid != self._current_id and now - t > self._ttl]
         for sid in expired:
             self._snapshots.pop(sid, None)
             self._created_at.pop(sid, None)
-        return tuple(expired)
 
     def put(self, model: NetworkModel) -> str:
         """Register an externally-constructed model under a fresh id (stores a

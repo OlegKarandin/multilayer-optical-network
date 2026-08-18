@@ -78,3 +78,11 @@ def test_branching_away_unprotects_previous_branch():
         store.create()
     with pytest.raises(KeyError):
         store.get(root)
+
+
+def test_max_snapshots_below_one_raises_at_construction():
+    """#5 fix: max_snapshots=0 used to silently evict the snapshot create()
+    just made (nothing was protected yet), handing the caller a valid-looking
+    id that was already gone. Reject the nonsensical config up front instead."""
+    with pytest.raises(ValueError):
+        SnapshotStore(initial=_empty(), max_snapshots=0)
