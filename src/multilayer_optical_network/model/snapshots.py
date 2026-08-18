@@ -2,7 +2,7 @@ from __future__ import annotations
 import time
 import uuid
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 from .network import NetworkModel
 
 
@@ -16,6 +16,10 @@ class SnapshotStore:
         self._current = initial
         self._snapshots: OrderedDict[str, NetworkModel] = OrderedDict()
         self._created_at: Dict[str, float] = {}
+        if max_snapshots is not None and max_snapshots < 1:
+            raise ValueError(
+                f"max_snapshots must be >= 1 (or None for unbounded), got {max_snapshots!r}"
+            )
         self._max = max_snapshots
         self._ttl = ttl_seconds
         # The id of the snapshot `_current` was branched/restored from -- the
@@ -28,6 +32,7 @@ class SnapshotStore:
         self._current_id: Optional[str] = None
 
     def _store(self, sid: str, model: NetworkModel) -> None:
+        model.freeze()
         self._snapshots[sid] = model
         self._created_at[sid] = time.monotonic()
         while self._max is not None and len(self._snapshots) > self._max:
@@ -48,47 +53,41 @@ class SnapshotStore:
         return self._current
 
     def create(self) -> str:
-        self.reap()
-        sid = uuid.uuid4().hex
-        self._store(sid, self._current.clone())
-        return sid
-
-    def branch(self, parent_id: str) -> str:
-        self.reap()
-        parent = self._snapshots[parent_id]
-        bid = uuid.uuid4().hex
-        new = parent.clone()  # always unfrozen working copy
-        # Store an INDEPENDENT clone, not `new` itself: every other writer
-        # (create/restore/put) clones before storing, and branch() must too,
-        # or the stored snapshot and the live working copy are the same
-        # object -- mutating current() after branch() would also silently
-        # mutate the branch's own "point in time" snapshot, making
-        # snapshot_restore(bid) a no-op instead of a real rollback.
-        self._current_id = bid    # protect the new branch point BEFORE storing
-        self._store(bid, new.clone())
-        self._current = new
-        return bid
-
-    def get(self, sid: str) -> NetworkModel:
-        """Return a FROZEN clone of the stored snapshot. Callers can read it but
-        cannot mutate it — a stored snapshot can never be corrupted through
-        get(). Mutate via branch()/current() or the returned model's clone()."""
-        return self._snapshots[sid].clone().freeze()
+        """Register the current model as a new snapshot. Identical to
+        put(current()) -- kept as a separate name because it reads better at
+        call sites that mean "checkpoint where I am now"."""
+        return self.put(self._current)
 
     def restore(self, sid: str) -> None:
+        self.reap()
         self._current = self._snapshots[sid].clone()
         self._current_id = sid
 
-    def reap(self) -> Tuple[str, ...]:
+    def branch(self, parent_id: str) -> str:
+        """Move current() onto parent_id's stored state and protect that id
+        from eviction. Mints NO new id -- collapsed onto restore(), which
+        already does everything a "branch" needs: clone into current() (so
+        mutating current() can't alias the stored point), and mark parent_id
+        as the one id that survives cap/TTL eviction. To branch onto a fresh,
+        distinct point, create() one first, then branch(that_id)."""
+        self.restore(parent_id)
+        return parent_id
+
+    def get(self, sid: str) -> NetworkModel:
+        """Return the stored snapshot. Already frozen at write time (_store),
+        so callers can read it but cannot mutate it -- mutate via
+        branch()/current() or the returned model's own clone()."""
+        return self._snapshots[sid]
+
+    def reap(self) -> None:
         if self._ttl is None:
-            return ()
+            return
         now = time.monotonic()
         expired = [sid for sid, t in self._created_at.items()
                   if sid != self._current_id and now - t > self._ttl]
         for sid in expired:
             self._snapshots.pop(sid, None)
             self._created_at.pop(sid, None)
-        return tuple(expired)
 
     def put(self, model: NetworkModel) -> str:
         """Register an externally-constructed model under a fresh id (stores a

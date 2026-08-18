@@ -247,3 +247,24 @@ def test_validation_report_dict_sanitizes_nonfinite_floats_when_flattened():
     assert flat["gsnr_db"] == "-Infinity"
     assert flat["deficit_db"] == "Infinity"
     assert flat["feasible_downshift_modes"] == []
+
+
+def test_violation_dict_falls_back_to_invalid_plan_on_schema_drift():
+    """New structural guard (finding: violations.py/views.py de-dup): if
+    validate.py's detail dict and violations.py's Pydantic model ever drift
+    (a field renamed on one side and not the other), _violation_dict must not
+    raise a raw pydantic.ValidationError out of a tool call -- CLAUDE.md's
+    "typed, never exceptions" rule -- it must convert the drift into a typed
+    invalid_plan-shaped violation instead."""
+    violation = Violation(ViolationType.MODE_INFEASIBLE, 0, "lpAB", False, {
+        "margin_db": -1.0, "gsnr_db": 14.0,
+        # missing required_gsnr_db/deficit_db/feasible_downshift_modes --
+        # simulates a field-list drift between validate.py and violations.py
+    })
+    report = ValidationReport(violations=(violation,), num_states=1)
+    out = validation_report_dict(report)
+    flat = out["violations"][0]
+    assert flat["type"] == "invalid_plan"
+    assert flat["state_index"] == 0
+    assert flat["asset_id"] == "lpAB"
+    assert "mode_infeasible" in flat["message"]

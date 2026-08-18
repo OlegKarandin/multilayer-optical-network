@@ -148,6 +148,24 @@ def test_diff_models_matches_store_diff():
     assert d["risk_groups"]["added"] == ("rg1",)
 
 
+def test_diff_models_registry_set_matches_model_state():
+    """Guard for finding #6: diff_models' 14 hand-written registry lines must
+    track every dict/set state container NetworkModel actually carries, so a
+    newly added registry can't silently drift out of diff/reconcile the way
+    _roadms/_transceivers once did (commit 490e3f4 had to add them after they
+    existed on the model but were missing from diff_models -- meaning a
+    branch that changed a ROADM would have silently diffed as unchanged).
+    Derives the expected set from the model's own __dict__ instead of
+    hand-listing it a second time, so this test can't drift the same way."""
+    model = _empty_model()
+    actual_registries = {
+        name.lstrip("_") for name, value in vars(model).items()
+        if name.startswith("_") and isinstance(value, (dict, set))
+    }
+    diffed = diff_models(model, model)
+    assert actual_registries == set(diffed)
+
+
 def test_put_registers_external_model():
     base = _empty_model()
     store = SnapshotStore(base)
@@ -156,6 +174,34 @@ def test_put_registers_external_model():
     sid = store.put(other)
     assert store.get(sid) is not other          # stored a clone, not the live object
     assert "rg9" in store.get(sid)._risk_groups
+
+
+def test_get_returns_the_same_frozen_object_on_repeat_calls():
+    """#1 fix: get() must stop cloning on every call -- the object identity
+    returned is stable across repeat get()s of the same id (it's the one
+    frozen object stored at write time, not a fresh clone each time)."""
+    store = SnapshotStore(initial=_seed())
+    sid = store.create()
+    first = store.get(sid)
+    second = store.get(sid)
+    assert first is second
+    assert first._frozen is True
+
+
+def test_create_is_put_of_current():
+    """#3 fix: create() has no behavior of its own beyond put(current())."""
+    store = SnapshotStore(initial=_seed())
+    store.current().set_qot_state("lp1",
+        QoTState(gsnr_db=20.0, osnr_db=22.0, margin_db=3.0))
+    sid = store.create()
+    assert store.get(sid).get_qot_state("lp1").margin_db == 3.0
+
+
+def test_reap_returns_none():
+    """#4 fix: every call site discards reap()'s return value; make the
+    contract explicit instead of building a tuple nobody reads."""
+    store = SnapshotStore(initial=_seed(), ttl_seconds=10.0)
+    assert store.reap() is None
 
 
 # --- Task 3: TTL reap wiring + ROADM/Transceiver diff keys -----------------
