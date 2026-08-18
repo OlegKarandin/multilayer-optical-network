@@ -38,6 +38,8 @@ def generate_demands(
     mass_jitter: float = 0.15,
     pair_density: Optional[float] = None,
     protection_constraints: Optional[dict] = None,
+    aggregate: bool = False,
+    undirected: bool = False,
 ) -> List[dict]:
     """Emit a gravity-weighted demand list totalling ~`scale` Gbps of offered load.
 
@@ -69,10 +71,29 @@ def generate_demands(
             to `("physical", "link", False)`. Without this, a synthesized
             operating network can never request srlg/risk_group-basis
             protection.
+        aggregate: if ``False`` (default), each pair's offered volume is
+            quantized into `unit_gbps`-sized demand records (today's
+            behavior, for feeding `solve_allocation`). If ``True``, each
+            surviving pair emits exactly one record carrying its raw,
+            unquantized offered Gbps — an OD-matrix shape with no grooming
+            unit involved.
+        undirected: if ``False`` (default), both `(u, v)` and `(v, u)` are
+            considered distinct pairs (today's behavior). If ``True``, only
+            the `u < v` direction survives (gravity weight is symmetric, so
+            this drops exact duplicates) — for a traffic matrix over
+            unordered node pairs.
 
-    Deterministic given (model, seed, all params). Disconnected pairs are skipped.
+    Deterministic given (model, seed, all params). Disconnected pairs are
+    skipped. `model` need not have an IP layer: if it exposes `list_routers`
+    (a `NetworkModel`), node ids are router sites; otherwise (a bare
+    `OpticalNetworkModel`) node ids are drawn from OMS endpoints.
     """
-    nodes = sorted({r.site for r in model.list_routers()})
+    routers = getattr(model, "list_routers", None)
+    if routers is not None:
+        nodes = sorted({r.site for r in routers()})
+    else:
+        nodes = sorted({n for oms in model.list_oms()
+                        for n in (oms.src_node_id, oms.dst_node_id)})
 
     # Undirected optical graph: one edge per node pair, shortest length if parallel.
     g: nx.Graph = nx.Graph()
@@ -111,6 +132,13 @@ def generate_demands(
             pair_w.append((u, v, w))
             total_w += w
 
+    if undirected:
+        # Gravity weight is symmetric (w(u,v) == w(v,u)), so keeping only
+        # u < v drops exact duplicates; total_w is recomputed over survivors
+        # so `offered = scale * w / total_w` stays correctly normalized.
+        pair_w = [(u, v, w) for u, v, w in pair_w if u < v]
+        total_w = sum(w for _, _, w in pair_w)
+
     if pair_density is not None:
         mean_w = total_w / len(pair_w) if pair_w else 0.0
         kept: List[tuple] = []
@@ -122,13 +150,18 @@ def generate_demands(
 
     # Expand each pair's offered volume into unit-sized demand records (emission
     # order = sorted pairs, then unit index) carrying their gravity weight.
-    records: List[dict] = []             # {src, dst, w}
+    # In aggregate mode, each pair instead emits one record at its raw
+    # (unquantized) offered volume.
+    records: List[dict] = []             # {src, dst, w, gbps}
     if total_w > 0.0:
         for u, v, w in pair_w:
             offered = scale * w / total_w
-            n_units = int(round(offered / unit_gbps))
-            for _ in range(n_units):
-                records.append({"src": u, "dst": v, "w": w})
+            if aggregate:
+                if offered > 0.0:
+                    records.append({"src": u, "dst": v, "w": w, "gbps": offered})
+            else:
+                for _ in range(int(round(offered / unit_gbps))):
+                    records.append({"src": u, "dst": v, "w": w, "gbps": unit_gbps})
 
     # Protection: the top `protected_fraction` of records by gravity weight
     # (deterministic tie-break on src, dst, emission index).
@@ -145,7 +178,7 @@ def generate_demands(
             "id": f"d{i:04d}",
             "src": rec["src"],
             "dst": rec["dst"],
-            "demand_gbps": unit_gbps,
+            "demand_gbps": rec["gbps"],
             "protected": protected,
         }
         if protected and protection_constraints is not None:

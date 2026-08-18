@@ -13,6 +13,7 @@ from multilayer_optical_network.model.assets import ROADM, FiberType, Fiber, OMS
 from multilayer_optical_network.model.ip_assets import Router
 from multilayer_optical_network.model.modes import ModeRegistry, default_modes
 from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.model.optical_network import OpticalNetworkModel
 from multilayer_optical_network.model.topology_import import model_from_abstract_graph
 from multilayer_optical_network.model.traffic import generate_demands
 
@@ -35,6 +36,20 @@ def _star_model(leaf_len_km: float = 100.0) -> NetworkModel:
     for node in ("H", "A", "B", "C"):
         n.add_roadm(ROADM(id=f"roadm_{node}"))
         n.add_router(Router(id=f"router_{node}", site=node))
+    for leaf in ("A", "B", "C"):
+        fid = f"fiber_H_{leaf}"
+        n.add_fiber(Fiber(fid, "roadm_H", f"roadm_{leaf}", leaf_len_km, "SSMF"))
+        n.add_oms(OMS(f"oms_H_{leaf}", "H", leaf, ("roadm_H", fid)))
+    return n
+
+
+def _star_optical_model(leaf_len_km: float = 137.0) -> OpticalNetworkModel:
+    """Same topology as `_star_model`, but no routers: an optical-only model
+    to exercise the IP-layer-optional node-discovery fallback."""
+    n = OpticalNetworkModel(modes=_modes())
+    n.register_fiber_type(FiberType("SSMF", 0.2))
+    for node in ("H", "A", "B", "C"):
+        n.add_roadm(ROADM(id=f"roadm_{node}"))
     for leaf in ("A", "B", "C"):
         fid = f"fiber_H_{leaf}"
         n.add_fiber(Fiber(fid, "roadm_H", f"roadm_{leaf}", leaf_len_km, "SSMF"))
@@ -217,3 +232,67 @@ def test_protection_constraints_default_none_preserves_old_shape():
     demands = generate_demands(n, seed=0, scale=3000.0, protected_fraction=0.5)
     assert demands
     assert all("constraints" not in d for d in demands)
+
+
+# ------------------------------------------------------- optical-only models
+
+def test_optical_only_model_falls_back_to_oms_nodes():
+    """A bare OpticalNetworkModel (no routers) must yield the identical demand
+    set as the equivalent NetworkModel star topology -- mass is degree in the
+    OMS graph either way, so dropping the IP layer changes nothing."""
+    with_ip = generate_demands(_star_model(leaf_len_km=137.0), seed=0,
+                               scale=3000.0, mass_jitter=0.0)
+    optical_only = generate_demands(_star_optical_model(leaf_len_km=137.0),
+                                    seed=0, scale=3000.0, mass_jitter=0.0)
+    assert with_ip
+    assert with_ip == optical_only
+
+
+def test_optical_only_model_with_seeded_jitter_matches_ip_model():
+    """The jitter-bearing (default mass_jitter) path also matches, confirming
+    the RNG draw order is unaffected by which node-discovery branch ran."""
+    with_ip = generate_demands(_star_model(leaf_len_km=137.0), seed=3, scale=3000.0)
+    optical_only = generate_demands(_star_optical_model(leaf_len_km=137.0),
+                                    seed=3, scale=3000.0)
+    assert with_ip == optical_only
+
+
+# -------------------------------------------------------------- aggregate mode
+
+def test_aggregate_mode_one_record_per_pair_with_raw_gbps():
+    n = _star_model(leaf_len_km=137.0)
+    ds = generate_demands(n, seed=0, scale=3000.0, aggregate=True, mass_jitter=0.0)
+    assert ds
+    pairs = [(d["src"], d["dst"]) for d in ds]
+    assert len(pairs) == len(set(pairs))              # one record per pair
+    # raw gravity shares are not round unit_gbps multiples on this topology
+    assert not all(d["demand_gbps"] % 100.0 == 0.0 for d in ds)
+    assert abs(sum(d["demand_gbps"] for d in ds) - 3000.0) < 1e-6
+
+
+def test_aggregate_mode_default_false_preserves_unit_expansion():
+    n = _star_model()
+    aggregate_off = generate_demands(n, seed=0, scale=3000.0)
+    explicit_off = generate_demands(n, seed=0, scale=3000.0, aggregate=False)
+    assert aggregate_off == explicit_off
+    assert all(d["demand_gbps"] == 100.0 for d in aggregate_off)
+
+
+# ------------------------------------------------------------- undirected mode
+
+def test_undirected_mode_dedupes_pairs_and_preserves_volume():
+    n = _star_model(leaf_len_km=137.0)
+    ds = generate_demands(n, seed=0, scale=3000.0, undirected=True,
+                          aggregate=True, mass_jitter=0.0)
+    assert ds
+    assert all(d["src"] < d["dst"] for d in ds)        # single canonical direction
+    assert abs(sum(d["demand_gbps"] for d in ds) - 3000.0) < 1e-6
+
+
+def test_undirected_mode_default_false_preserves_both_directions():
+    n = _star_model()
+    a = generate_demands(n, seed=0, scale=3000.0)
+    b = generate_demands(n, seed=0, scale=3000.0, undirected=False)
+    assert a == b
+    pairs = {(d["src"], d["dst"]) for d in a}
+    assert ("H", "A") in pairs and ("A", "H") in pairs
