@@ -1,9 +1,18 @@
 from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Dict, List
+
+from pydantic import ValidationError
+
 from .network import NetworkModel
 from . import ip_routing as _ipr
 from .json_safety import safe_float as _safe_float
+from .violations import (
+    DisjointnessCollapseViolation, DroppedTrafficViolation,
+    InvalidPlanViolation, IpLinkOverloadViolation, ModeInfeasibleViolation,
+    ProtectionNotViableViolation, ProtectionOversubscribedViolation,
+    SpectrumClashViolation,
+)
 
 
 def _fiber(f) -> dict:
@@ -379,27 +388,52 @@ def validation_report_dict(report) -> Dict[str, Any]:
     }
 
 
+_VIOLATION_MODELS = {
+    "mode_infeasible": ModeInfeasibleViolation,
+    "spectrum_clash": SpectrumClashViolation,
+    "ip_link_overload": IpLinkOverloadViolation,
+    "dropped_traffic": DroppedTrafficViolation,
+    "disjointness_collapse": DisjointnessCollapseViolation,
+    "protection_not_viable": ProtectionNotViableViolation,
+    "protection_oversubscribed": ProtectionOversubscribedViolation,
+    "invalid_plan": InvalidPlanViolation,
+}
+
+
 def _violation_dict(v) -> Dict[str, Any]:
-    """Flatten a Violation into its discriminated-union JSON shape. v.detail's
-    keys already ARE the target field names (each finding-builder in
-    validate.py -- _mode_infeasible_findings, _spectrum_clash_findings,
-    _ip_findings, _disjointness_findings, _protection_viability_findings,
-    _protection_oversubscription_findings, plus the INVALID_PLAN construction
-    site -- builds its detail dict with the exact keys violations.py's
-    matching model declares as fields), so a flat merge is correct with no
-    per-type dispatch needed here. Every value is run through safe_float so a
-    non-finite QoT-derived float (e.g. the failed-asset -inf margin sentinel)
-    stays valid JSON -- this hand-built dict is the path every test that
-    calls a tool's underlying function directly (bypassing real FastMCP
-    protocol serialization) actually sees; violations.py's SafeFloat
-    annotation independently sanitizes the SAME data on the real
-    protocol-serving path (FastMCP's model_validate/model_dump), so both
-    paths agree without duplicated logic drift (both ultimately call the one
-    shared json_safety.safe_float)."""
-    out = {"type": v.type.value, "state_index": v.state_index,
-           "asset_id": v.asset_id, "transient": v.transient}
-    out.update({k: _safe_float(dv) for k, dv in v.detail.items()})
-    return out
+    """Flatten a Violation into its discriminated-union JSON shape by
+    constructing the matching violations.py Pydantic model -- one field list
+    (the model's), not two (a model plus a hand-built flattening kept in
+    lockstep by hand). v.detail's keys already ARE the model's field names
+    (each finding-builder in validate.py -- _mode_infeasible_findings,
+    _spectrum_clash_findings, _ip_findings, _disjointness_findings,
+    _protection_viability_findings, _protection_oversubscription_findings,
+    plus the INVALID_PLAN construction site -- builds its detail dict with
+    the exact keys violations.py's matching model declares as fields). If
+    validate.py and violations.py ever drift, model_cls(...) raises
+    ValidationError here -- caught and converted to a typed invalid_plan
+    violation instead of escaping a tool call raw (CLAUDE.md: "typed, never
+    exceptions"). Non-finite QoT-derived floats (e.g. the failed-asset -inf
+    margin sentinel) are sanitized automatically by model_dump(mode="json")
+    via violations.py's SafeFloat annotation -- the same json_safety.safe_float
+    this module's other serializers call directly, so both paths agree
+    without duplicated logic drift."""
+    model_cls = _VIOLATION_MODELS[v.type.value]
+    try:
+        instance = model_cls(
+            state_index=v.state_index, asset_id=v.asset_id,
+            transient=v.transient, **v.detail,
+        )
+    except ValidationError as e:
+        return {
+            "type": "invalid_plan",
+            "state_index": v.state_index,
+            "asset_id": v.asset_id,
+            "transient": v.transient,
+            "message": f"schema drift serializing {v.type.value!r}: {e}",
+            "op_index": None,
+        }
+    return instance.model_dump(mode="json")
 
 
 def _jsonify_diff(diff):
