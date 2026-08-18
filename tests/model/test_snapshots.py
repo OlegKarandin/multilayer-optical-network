@@ -148,6 +148,24 @@ def test_diff_models_matches_store_diff():
     assert d["risk_groups"]["added"] == ("rg1",)
 
 
+def test_diff_models_registry_set_matches_model_state():
+    """Guard for finding #6: diff_models' 14 hand-written registry lines must
+    track every dict/set state container NetworkModel actually carries, so a
+    newly added registry can't silently drift out of diff/reconcile the way
+    _roadms/_transceivers once did (commit 490e3f4 had to add them after they
+    existed on the model but were missing from diff_models -- meaning a
+    branch that changed a ROADM would have silently diffed as unchanged).
+    Derives the expected set from the model's own __dict__ instead of
+    hand-listing it a second time, so this test can't drift the same way."""
+    model = _empty_model()
+    actual_registries = {
+        name.lstrip("_") for name, value in vars(model).items()
+        if name.startswith("_") and isinstance(value, (dict, set))
+    }
+    diffed = diff_models(model, model)
+    assert actual_registries == set(diffed)
+
+
 def test_put_registers_external_model():
     base = _empty_model()
     store = SnapshotStore(base)
