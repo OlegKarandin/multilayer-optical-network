@@ -158,6 +158,27 @@ def test_put_registers_external_model():
     assert "rg9" in store.get(sid)._risk_groups
 
 
+def test_get_returns_the_same_frozen_object_on_repeat_calls():
+    """#1 fix: get() must stop cloning on every call -- the object identity
+    returned is stable across repeat get()s of the same id (it's the one
+    frozen object stored at write time, not a fresh clone each time)."""
+    store = SnapshotStore(initial=_seed())
+    sid = store.create()
+    first = store.get(sid)
+    second = store.get(sid)
+    assert first is second
+    assert first._frozen is True
+
+
+def test_create_is_put_of_current():
+    """#3 fix: create() has no behavior of its own beyond put(current())."""
+    store = SnapshotStore(initial=_seed())
+    store.current().set_qot_state("lp1",
+        QoTState(gsnr_db=20.0, osnr_db=22.0, margin_db=3.0))
+    sid = store.create()
+    assert store.get(sid).get_qot_state("lp1").margin_db == 3.0
+
+
 # --- Task 3: TTL reap wiring + ROADM/Transceiver diff keys -----------------
 
 def test_create_reaps_expired_snapshots(monkeypatch):
