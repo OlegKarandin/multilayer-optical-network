@@ -66,12 +66,15 @@ def test_active_branch_survives_ttl_reap():
 def test_branching_away_unprotects_previous_branch():
     """Once you branch/restore to a new id, the OLD current id loses its
     eviction immunity -- protection tracks the single active branch, not
-    every branch ever created."""
+    every branch ever created. Post-collapse, branch() no longer mints a new
+    id (it returns parent_id itself), so "branching away" to a genuinely
+    different point means create()-ing one first, then branching onto it."""
     store = SnapshotStore(initial=_empty(), max_snapshots=3)
     root = store.create()
-    old_bid = store.branch(root)
-    store.branch(old_bid)              # moves current off old_bid
+    store.branch(root)                 # current_id = root
+    other = store.create()             # a fresh, distinct snapshot point
+    store.branch(other)                # moves current off root onto other
     for _ in range(10):
         store.create()
     with pytest.raises(KeyError):
-        store.get(old_bid)
+        store.get(root)
