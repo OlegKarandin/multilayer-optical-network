@@ -322,7 +322,7 @@ def test_german_17_end_to_end_real_adapter():
     """Full build against the real GNPy adapter: gravity demands → packer →
     materialized clone → QoT settle. Opt-in (slow)."""
     from multilayer_optical_network.model.modes import default_modes
-    from multilayer_optical_network.model.qot_results import QoTResultStore, QoTCache
+    from multilayer_optical_network.model.qot_results import QoTResultStore, QoTCache, HarvestCache
     from multilayer_optical_network.model.allocation import make_adapter_evaluator
 
     graph = json.loads(reference_topology("german_17").read_text(encoding="utf-8"))["graph"]
@@ -333,7 +333,9 @@ def test_german_17_end_to_end_real_adapter():
     # packer re-probes the same OMS routes every iteration, so repeated
     # (path, direction, loading) tuples are served without re-propagating.
     cache = QoTCache()
-    qot = make_adapter_evaluator(model, store, cache=cache)
+    harvest_cache = HarvestCache()
+    qot = make_adapter_evaluator(model, store, cache=cache,
+                                 harvest_cache=harvest_cache)
 
     t0 = time.perf_counter()
     res = build_operating_network(
@@ -345,7 +347,25 @@ def test_german_17_end_to_end_real_adapter():
     assert res.model.list_lightpaths()                    # a loaded operating network
     assert res.report.status in (SolverStatus.SOLUTION, SolverStatus.PARTIAL)
     assert simulate_ip_routing(res.model).dropped_services == ()
-    assert cache.hits > 0                                 # the cache actually served probes
+    assert harvest_cache.hits > 0, (
+        "the FULL harvest path served nothing -- either no harvest_cache "
+        "reached the evaluator, or FillPolicy.FULL stopped producing full-grid "
+        "loadings. Asserting on `cache` alone cannot tell the difference.")
+    # `cache` (QoTCache) only ever sees compute_qot calls, i.e. non-full-grid
+    # probes. build_operating_network's default fill_policy=FillPolicy.FULL
+    # means every probe in this scenario is full-grid and now routes through
+    # harvest_cache's fast path instead (confirmed by
+    # tests/model/test_propagation_budget.py's harvest=352/compute=0 split for
+    # this same demand set) -- so QoTCache legitimately sees zero calls here.
+    # That is the intended effect of wiring harvest_cache in, not a bug, so it
+    # is reported rather than asserted on.
     total = cache.hits + cache.misses
-    print(f"\n[qot-cache] hits={cache.hits} misses={cache.misses} "
-          f"hit_rate={cache.hits / total:.1%}")
+    harvest_total = harvest_cache.hits + harvest_cache.misses
+    if total:
+        print(f"\n[qot-cache] hits={cache.hits} misses={cache.misses} "
+              f"hit_rate={cache.hits / total:.1%}")
+    else:
+        print("\n[qot-cache] unused (0 calls -- all probes served by "
+              "harvest_cache, expected under FillPolicy.FULL)")
+    print(f"[harvest-cache] hits={harvest_cache.hits} misses={harvest_cache.misses} "
+          f"hit_rate={harvest_cache.hits / harvest_total:.1%}")

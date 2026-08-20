@@ -18,7 +18,7 @@ from pathlib import Path
 
 from .model.allocation import make_adapter_evaluator
 from .model.modes import default_modes
-from .model.qot_results import QoTCache, QoTResultStore
+from .model.qot_results import HarvestCache, QoTCache, QoTResultStore
 from .model.scenario import build_operating_network
 from .model.solvers import SolverStatus
 from .state_file import dump_state, running_gnpy_version, topology_fingerprint
@@ -108,7 +108,15 @@ def main() -> None:
     model = load_model_from_topology_file(args.topology, modes=modes)
 
     store = QoTResultStore()
-    qot = make_adapter_evaluator(model, store, cache=QoTCache())
+    # Both caches are content-addressed and shared across the WHOLE convergence
+    # loop: build_operating_network re-packs from the pristine model up to
+    # max_iters times, so the same (path, direction, mode) is probed again and
+    # again with identical physics. The harvest cache additionally collapses
+    # FillPolicy.FULL's per-probe-slot compute_qot calls into one propagation
+    # per path -- without it that branch (allocation.make_adapter_evaluator) is
+    # dead code and every candidate lambda re-propagates.
+    qot = make_adapter_evaluator(model, store, cache=QoTCache(),
+                                 harvest_cache=HarvestCache())
     params = {
         "seed": args.seed, "target_mean_util": args.target_mean_util,
         "max_util_cap": args.max_util_cap, "pair_density": args.pair_density,

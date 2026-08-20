@@ -84,11 +84,15 @@ class HarvestCache:
     def __init__(self, maxsize: int = 4096) -> None:
         self._store: "OrderedDict[Any, Dict[int, Any]]" = OrderedDict()
         self._maxsize = maxsize
+        self.hits = 0
+        self.misses = 0
 
     def get(self, key: Any) -> Optional[Dict[int, Any]]:
         if key not in self._store:
+            self.misses += 1
             return None
         self._store.move_to_end(key)
+        self.hits += 1
         return self._store[key]
 
     def put(self, key: Any, value: Dict[int, Any]) -> None:

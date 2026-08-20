@@ -20,3 +20,14 @@ def test_harvest_cache_evicts_oldest():
         c.put((i,), _vec(float(i)))
     assert c.get((0,)) is None      # evicted
     assert c.get((2,)) is not None
+
+
+def test_harvest_cache_tracks_hits_and_misses():
+    c = HarvestCache()
+    key = ("oms-AZ", "forward", "400G@7.1dB", ("fp",))
+    assert c.get(key) is None                  # miss: nothing put yet
+    c.put(key, _vec(17.8))
+    assert c.get(key) is not None               # hit
+    assert c.get(key) is not None               # hit again
+    assert c.hits == 2
+    assert c.misses == 1

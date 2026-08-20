@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from multilayer_optical_network import build_cli
+from multilayer_optical_network.data import reference_topology
 from multilayer_optical_network.model.modes import default_modes
 from multilayer_optical_network.model.scenario import ScenarioReport, ScenarioResult
 from multilayer_optical_network.model.solvers import SolverStatus
@@ -271,3 +272,38 @@ def test_unplaced_warning_names_a_remediation_flag_for_a_known_limit(
     _run(monkeypatch, topo, out)
     err = capsys.readouterr().err
     assert "--max-util-cap" in err or "--target-mean-util" in err
+
+
+# --- Task 2: the CLI must wire a HarvestCache into the evaluator ---
+
+def test_cli_wires_a_harvest_cache_into_the_evaluator(monkeypatch, tmp_path):
+    """FillPolicy.FULL's harvest fast path is gated on `harvest_cache is not
+    None` (allocation.make_adapter_evaluator). Without one, every candidate
+    lambda re-propagates the same path through compute_qot -- the probe sits
+    first in the loading tuple, so `_cache_key` differs per probe slot and the
+    QoTCache cannot collapse them. The CLI must pass one."""
+    from multilayer_optical_network import build_cli
+    from multilayer_optical_network.model.qot_results import HarvestCache
+
+    seen = {}
+    real = build_cli.make_adapter_evaluator
+
+    def _spy(model, store, **kw):
+        seen.update(kw)
+        return real(model, store, **kw)
+
+    monkeypatch.setattr(build_cli, "make_adapter_evaluator", _spy)
+    monkeypatch.setattr(build_cli, "build_operating_network",
+                        lambda *a, **k: (_ for _ in ()).throw(SystemExit(0)))
+
+    out = tmp_path / "state.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        ["multilayer-optical-network-build",
+         "--topology", str(reference_topology("german_17")),
+         "--out", str(out)])
+    with pytest.raises(SystemExit):
+        build_cli.main()
+
+    assert isinstance(seen.get("harvest_cache"), HarvestCache), (
+        f"CLI must pass a HarvestCache to make_adapter_evaluator; got {seen!r}")
