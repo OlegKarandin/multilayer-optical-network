@@ -166,40 +166,64 @@ def _roadm_successor(network, node):
 def _path_physical_fingerprint(
     model: OpticalNetworkModel, oms_sequence: Tuple[str, ...], direction: Direction,
 ) -> tuple:
-    """Fingerprint every GSNR-relevant physical input on the resolved path.
+    """Fingerprint every GSNR-relevant physical input on the resolved path — and
+    nothing else.
 
-    The asset dataclasses (Amplifier/Fiber/FiberType/ROADM) are frozen and
-    hashable, so each element object is embedded whole — any field change (an
-    ``inject_degradation`` NF/loss delta, a different length or gain) flips the
-    fingerprint. Path-scoped, so a degradation on a disjoint OMS leaves this
-    path's key unchanged (content-addressing, no explicit invalidation)."""
+    PHYSICS ONLY: no asset ids, no node ids, no OMS ids. Two element chains
+    carrying identical parameters propagate to identical GSNR, so they SHOULD
+    share a key. That is what lets the forward and backward requests for one
+    lightpath alias on an undamaged (symmetric) span, and it aliases physically
+    identical parallel spans for free. An asymmetric ``inject_degradation``
+    makes the two directions' physical parts diverge and the key splits again on
+    its own — content-addressing, no explicit invalidation, and CLAUDE.md's
+    per-direction contract preserved exactly.
+
+    Identity, where a caller needs it, is added by the key builder: ``_cache_key``
+    keeps ``oms_sequence`` and ``direction`` because its cached value carries a
+    ``QoTBreakdown`` full of per-element uids. ``harvest_cache_key`` does not,
+    because its value is a bare slot -> QoTState vector.
+
+    Path-scoped, so a degradation on a disjoint OMS leaves this path's key
+    unchanged."""
     if direction == Direction.BACKWARD:
         seq = reverse_oms_sequence(model, oms_sequence)
-        if seq is None:                      # unpaired reverse OMS: compute_qot raises later
-            seq = oms_sequence
+        if seq is None:
+            # No paired reverse chain: _propagate_loading raises for this
+            # request. Key it distinctly. With identity stripped, falling back
+            # to the forward sequence would produce a byte-identical key, and a
+            # caller that omits `direction` (harvest_cache_key) would then serve
+            # the forward answer to a request that must fail.
+            return (("unpaired-reverse", tuple(oms_sequence)),)
     else:
         seq = oms_sequence
     parts: list = []
     for oms_id in seq:
         oms = model.get_oms(oms_id)          # KeyError => caller handles as a miss
-        parts.append(("oms", oms_id, oms.src_node_id, oms.dst_node_id))
+        parts.append(("oms",))               # boundary marker, carries no identity
         for el_id in oms.elements:
             if el_id in model._amplifiers:
-                parts.append(model._amplifiers[el_id])
+                a = model._amplifiers[el_id]
+                parts.append(("amp", a.type_variety, a.gain_db, a.nf_db, a.tilt_db))
             elif el_id in model._fibers:
                 f = model._fibers[el_id]
-                parts.append(f)
-                parts.append(model.get_fiber_type(f.type_variety))
+                ft = model.get_fiber_type(f.type_variety)
+                parts.append(("fiber", f.length_km, f.extra_loss_db,
+                              ft.type_variety, ft.loss_coef_db_per_km,
+                              ft.dispersion, ft.effective_area, ft.pmd_coef))
             elif el_id in model._roadms:
-                parts.append(model._roadms[el_id])
+                r = model._roadms[el_id]
+                parts.append(("roadm", r.target_pch_out_db, r.add_drop_osnr_db))
             else:
+                # Unknown element type: no physics to project, so keep the id.
+                # Conservative — it can only ever cause a miss, never a bad hit.
                 parts.append(("el", el_id))
-    # S4-4 terminal drop ROADM (appended in compute_qot; constant params, embedded
-    # for completeness so a differing drop ROADM keys distinctly).
+    # S4-4 terminal drop ROADM (appended in compute_qot; embedded so a differing
+    # drop ROADM keys distinctly).
     if seq:
         drop_id = f"roadm_{model.get_oms(seq[-1]).dst_node_id}"
         if drop_id in model._roadms:
-            parts.append(model._roadms[drop_id])
+            r = model._roadms[drop_id]
+            parts.append(("drop-roadm", r.target_pch_out_db, r.add_drop_osnr_db))
     return tuple(parts)
 
 
@@ -786,15 +810,17 @@ def harvest_cache_key(
     model: OpticalNetworkModel, oms_sequence: Tuple[str, ...], direction: Direction,
     mode_id: str,
 ) -> tuple:
-    """Content-addressed key for a full-comb harvest: path + direction + mode +
-    physical fingerprint — deliberately no probe frequency, because one harvest
-    answers every slot at once (unlike ``_cache_key``, which is one probe)."""
-    return (
-        tuple(oms_sequence),
-        direction.value,
-        mode_id,
-        _path_physical_fingerprint(model, oms_sequence, direction),
-    )
+    """Content-addressed key for a full-comb harvest: mode + the path's physical
+    fingerprint, and nothing else.
+
+    No probe frequency, because one harvest answers every slot at once (unlike
+    ``_cache_key``, which is one probe). No ``oms_sequence`` and no ``direction``
+    either: a harvest's value is a bare slot -> QoTState vector with
+    ``limiting_element_id=None``, so it carries no identity to leak. Two requests
+    whose resolved element chains carry identical physics therefore MUST get the
+    same numbers — and on an undamaged span that is exactly the forward and the
+    backward request for one lightpath, which halves the propagation count."""
+    return (mode_id, _path_physical_fingerprint(model, oms_sequence, direction))
 
 
 def harvest_qot(

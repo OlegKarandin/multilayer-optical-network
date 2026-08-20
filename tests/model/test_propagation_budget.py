@@ -34,7 +34,16 @@ from tests.conftest import FIXTURES_DIR
 # Propagations `solve_allocation_model` performs on german_17 with the frozen
 # 22-demand set. UPDATE DELIBERATELY, in the commit that changes it, and say
 # why in the commit message. A surprise change here is the point of the test.
-PROPAGATION_BUDGET = 352
+#
+# 352 -> 179 (Task 3, perf(qot): physics-only harvest key): harvest_cache_key
+# dropped oms_sequence/direction, so a symmetric span's forward and backward
+# requests now alias to one harvest. Not an exact halving: solving 2X + Y =
+# 352 (old) and X + Y = 179 (new) gives X = 173 path/mode combos that were
+# queried in both directions and now alias 2:1, and Y = 6 combos genuinely
+# queried in only one direction during this solve (no counterpart request
+# exists to alias against) -- verified by instrumenting harvest_cache_key
+# call sites during a real solve_allocation_model run on this fixture.
+PROPAGATION_BUDGET = 179
 
 _STUB_GSNR_DB = 30.0
 
