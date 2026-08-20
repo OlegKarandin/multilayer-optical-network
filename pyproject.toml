@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "multilayer-optical-network"
-version = "0.1.2"
+version = "0.1.3"
 description = "Deterministic multi-layer optical network model: IP-over-optical topology, GNPy QoT adapter, solvers, and validator. Usable standalone, or as the physical/IP-layer backend behind multilayer-optical-mcp."
 requires-python = ">=3.11"
 readme = "README.md"
