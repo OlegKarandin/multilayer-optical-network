@@ -3,7 +3,7 @@
   "meta": {
     "topology_path": "src/multilayer_optical_network/data/german_17.json",
     "gnpy_version": "2.14.0",
-    "built_at": "2026-08-15T13:47:50.907979+00:00",
+    "built_at": "2026-08-20T18:10:13.172326+00:00",
     "params": {
       "seed": 0,
       "target_mean_util": 0.4,
