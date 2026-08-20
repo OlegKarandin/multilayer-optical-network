@@ -481,3 +481,34 @@ def test_residual_gbps_treats_unseeded_qot_as_zero_not_a_crash():
 
     g = build_layered_graph(n)   # must not raise LookupError
     assert lpe_edges(g) == []    # zero residual -> no LPE edge, same as margin<0
+
+
+# ---------------------------------------------------------------------------
+# min_residual_gbps tests (Task 4: capacity-filtered LPE edges)
+# ---------------------------------------------------------------------------
+
+
+def test_min_residual_prunes_a_lightpath_that_cannot_carry_the_demand():
+    """_W_LPE is the cheapest weight in the graph, so Yen's returns a groom
+    first whatever its residual. Capacity must be checked DURING routing, not
+    clamped after it."""
+    n = _one_lightpath_model()
+    n.add_service(Service("s-load", "R1", "R2", 70.0, working_path=("ip-AB",)))
+    g = build_layered_graph(n, min_residual_gbps=40.0)   # 30G residual < 40G
+    assert lpe_edges(g) == []
+
+
+def test_min_residual_keeps_a_lightpath_that_can_carry_the_demand():
+    n = _one_lightpath_model()
+    n.add_service(Service("s-load", "R1", "R2", 70.0, working_path=("ip-AB",)))
+    g = build_layered_graph(n, min_residual_gbps=30.0)   # exactly enough
+    assert [d["lightpath_id"] for _, _, d in lpe_edges(g)] == ["lp-AB"]
+
+
+def test_min_residual_defaults_to_todays_behaviour():
+    """route_service and restoration want degraded options; the default must
+    not take them away."""
+    n = _one_lightpath_model()
+    n.add_service(Service("s-load", "R1", "R2", 70.0, working_path=("ip-AB",)))
+    g = build_layered_graph(n)
+    assert [d["lightpath_id"] for _, _, d in lpe_edges(g)] == ["lp-AB"]

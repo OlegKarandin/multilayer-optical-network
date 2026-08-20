@@ -148,10 +148,20 @@ def build_layered_graph(
     forbidden_assets: FrozenSet[str] = frozenset(),
     *,
     grid: SpectrumGrid | None = None,
+    min_residual_gbps: float = 0.0,
 ) -> nx.MultiDiGraph:
     """Construct the layered auxiliary graph for the model's current loading.
     `forbidden_assets` prunes any OMS touching them (no WLE) and any lightpath
     crossing them (no LPE).
+
+    `min_residual_gbps` additionally prunes any LPE edge whose lightpath's
+    residual capacity is below this threshold -- capacity checked DURING graph
+    construction (and therefore during Yen's routing), not clamped after the
+    fact. The default, `0.0`, means no filtering beyond the existing
+    residual>0 gate: today's behaviour, unchanged. Callers that want degraded
+    grooming options in the candidate set (`route_service`, restoration) must
+    keep the default; only a caller that knows the demand size up front (the
+    allocation packer) should pass it.
 
     A MultiDiGraph (not a plain DiGraph) so parallel OMS between the same ordered
     node pair stay distinct per wavelength: on a DiGraph the second WLE
@@ -187,6 +197,14 @@ def build_layered_graph(
             continue
         residual = _residual_gbps(model, lp, load)
         if residual <= 0.0:
+            continue
+        if residual < min_residual_gbps:
+            # Capacity checked DURING routing, not after. _W_LPE is the cheapest
+            # weight in the graph, so a lightpath that cannot carry the demand
+            # would otherwise be returned first by Yen's and then clamped to its
+            # residual by `restored = min(demand, groom_cap, new_cap)` -- a
+            # systematic degraded pick. Callers that WANT degraded options
+            # (route_service, restoration) leave this at the 0.0 default.
             continue
         u, v = _lightpath_endpoints(model, lp)
         g.add_edge((ACCESS, u), (ACCESS, v), key=lp.id,

@@ -440,3 +440,47 @@ def test_pack_per_iteration_reseed_lets_later_demand_groom_onto_earlier_lightpat
     # none. Confirms the "fewer new lightpaths / transponders" claim directly,
     # not just via the reused_lightpaths/new_lightpaths field on d3 alone.
     assert len(work.list_lightpaths()) == 2
+
+
+# ---------------------------------------------------------------------------
+# min_residual_gbps filtering in _pack (Task 4: capacity-filtered LPE edges)
+# ---------------------------------------------------------------------------
+
+from multilayer_optical_network.model.ip_assets import Service
+from tests.model.test_multilayer_graph import (
+    FakeQot as _GraphFakeQot, _one_lightpath_model,
+)
+
+
+def test_pack_prefers_a_new_lightpath_over_a_degraded_groom():
+    """The 10-of-400 case. lp-AB has 30G residual against a 40G demand; a fresh
+    lightpath on a free slot carries all 40. Without a capacity filter the
+    groom sits on the cheapest edge, wins Yen's, and `restored = min(demand,
+    groom_cap, new_cap)` reports shortfall=10."""
+    n = _one_lightpath_model()
+    n.add_service(Service("s-load", "R1", "R2", 70.0, working_path=("ip-AB",)))
+    demands = [{"id": "d1", "src": "A", "dst": "B", "demand_gbps": 40.0}]
+    res = solve_allocation(n, _GraphFakeQot(20.0), demands, {"A": 10, "B": 10})
+
+    assert len(res.placements) == 1
+    p = res.placements[0]
+    assert p.shortfall_gbps == 0.0, (
+        f"expected a full-rate placement, got shortfall={p.shortfall_gbps}")
+    assert p.new_lightpaths, "expected a new lightpath, not the 30G groom"
+
+
+def test_pack_falls_back_to_the_unfiltered_graph_when_nothing_can_carry_the_demand():
+    """Degraded placements stay legitimate output (restoration / best-effort).
+    Filtering must narrow the search, never remove the only answer. Here the
+    QoT makes every NEW run infeasible, so the 30G groom is all there is."""
+    n = _one_lightpath_model()
+    n.add_service(Service("s-load", "R1", "R2", 70.0, working_path=("ip-AB",)))
+    demands = [{"id": "d1", "src": "A", "dst": "B", "demand_gbps": 40.0}]
+    # 0 dB GSNR: below every mode's required_gsnr_db, so _best_feasible_mode
+    # returns None for any new run. Grooming needs no QoT, so it survives.
+    res = solve_allocation(n, _GraphFakeQot(0.0), demands, {"A": 10, "B": 10})
+
+    assert len(res.placements) == 1, f"unplaced={res.unplaced}"
+    p = res.placements[0]
+    assert p.reused_lightpaths == ("lp-AB",)
+    assert p.restored_gbps == 30.0 and p.shortfall_gbps == 10.0

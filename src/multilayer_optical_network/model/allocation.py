@@ -492,8 +492,21 @@ def _pack(
         # grid instance is threaded through both calls (S7-12 fix) so the graph
         # build and the placement probe never desync on grid choice.
         grid = SpectrumGrid.default()
-        g = build_layered_graph(work, grid=grid)
-        cands = _harvest_alloc(work, qot, g, src, dst, gbps, fill_policy=fill_policy, grid=grid)
+        # Filter grooming targets by the demand's own size. A Placement is one
+        # route, so a groomed leg bottlenecks the WHOLE demand -- a lightpath
+        # that cannot carry `gbps` cannot be part of a full-rate answer.
+        g = build_layered_graph(work, grid=grid, min_residual_gbps=gbps)
+        cands = _harvest_alloc(work, qot, g, src, dst, gbps,
+                               fill_policy=fill_policy, grid=grid)
+        if not cands:
+            # Nothing can carry the demand in full. Degraded placements remain
+            # legitimate output (restoration / best-effort), so re-harvest over
+            # the unfiltered graph before giving up. The repeated (path,
+            # direction) probes are served by the harvest cache, so the second
+            # pass is close to free.
+            g = build_layered_graph(work, grid=grid)
+            cands = _harvest_alloc(work, qot, g, src, dst, gbps,
+                                   fill_policy=fill_policy, grid=grid)
         if not cands:
             unplaced.append((did, "no feasible route"))
             continue
