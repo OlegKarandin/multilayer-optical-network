@@ -35,6 +35,16 @@ from tests.conftest import FIXTURES_DIR
 # 22-demand set. UPDATE DELIBERATELY, in the commit that changes it, and say
 # why in the commit message. A surprise change here is the point of the test.
 #
+# The full trail across the five perf tasks is 352 -> 352 -> 179 -> 179 -> 69:
+# only Task 3 and Task 5 (below) move the number. Task 2 (wire a shared
+# HarvestCache into the CLI evaluator) and Task 4 (gate grooming on whether the
+# lightpath can carry the demand) deliberately leave it UNCHANGED -- Task 2
+# moves the cache into the production wiring this test already instrumented by
+# hand, and Task 4's capacity filter narrows the graph without removing any
+# path/mode combo german_17's demand set actually probes. Both are no-ops here
+# by design, not missed wins; a reader diffing the commit range should expect
+# two flat steps.
+#
 # 352 -> 179 (Task 3, perf(qot): physics-only harvest key): harvest_cache_key
 # dropped oms_sequence/direction, so a symmetric span's forward and backward
 # requests now alias to one harvest. Not an exact halving: solving 2X + Y =

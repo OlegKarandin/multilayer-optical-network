@@ -77,9 +77,15 @@ class QoTCache:
 
 class HarvestCache:
     """Bounded LRU of full-comb harvest vectors, keyed by adapter.harvest_cache_key
-    (path fingerprint + direction + mode — no probe frequency). Off-model, injected
-    like QoTCache. Content-addressed: a changed physical input flips the key, so
-    there is no invalidation logic."""
+    — `(mode_id, path physical fingerprint)`, and nothing else. No probe
+    frequency (one harvest answers every slot at once), and neither the
+    `oms_sequence` nor the `direction`: a harvest's value is a bare slot ->
+    QoTState vector carrying no identity, so two requests whose resolved element
+    chains carry identical physics deliberately alias onto one entry. On an
+    undamaged (symmetric) span that is exactly a lightpath's forward and backward
+    request. Off-model, injected like QoTCache. Content-addressed: a changed
+    physical input — including an asymmetric one, which re-splits the two
+    directions on its own — flips the key, so there is no invalidation logic."""
 
     def __init__(self, maxsize: int = 4096) -> None:
         self._store: "OrderedDict[Any, Dict[int, Any]]" = OrderedDict()

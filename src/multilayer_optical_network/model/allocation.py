@@ -63,9 +63,12 @@ def make_adapter_evaluator(model, store, *, cache=None, harvest_cache=None) -> Q
     full-grid probe loading (every grid slot lit) and routes it through
     `harvest_qot` instead of `compute_qot`: one propagation harvests every
     carrier's GSNR, so the many probe-slot calls FillPolicy.FULL makes across a
-    solve/settle run collapse into one propagation per (path, direction, mode,
-    physical-fingerprint) instead of one per probe. Any non-full (subset/ACTUAL)
-    loading falls through to today's per-call `compute_qot` path unchanged."""
+    solve/settle run collapse into one propagation per `harvest_cache_key` —
+    `(mode_id, path physical fingerprint)` — instead of one per probe. Neither
+    the oms_sequence nor the direction is in that key, so physically identical
+    element chains (a symmetric span's two directions; two identical parallel
+    paths) share one propagation. Any non-full (subset/ACTUAL) loading falls
+    through to today's per-call `compute_qot` path unchanged."""
     grid = SpectrumGrid.default()
 
     def _eval(*, oms_sequence, direction, mode_id, loading):
@@ -381,11 +384,26 @@ def _harvest_alloc(model, qot, g, src, dst, demand_gbps, k=_ROUTE_CAP,
     new_only harvest (placement_common._harvest_placements): filters out any
     placement whose new run ends at a router-less optical node or whose reused
     lightpath has no bound IP link, same as route_service's post-harvest
-    filter. `stop_when`, when given, short-circuits the underlying harvest --
-    see `_harvest_placements`."""
-    placements = _harvest_placements(model, qot, g, src, dst, demand_gbps, k,
-                                     fill_policy=fill_policy, grid=grid,
-                                     stop_when=stop_when)
+    filter.
+
+    `stop_when`, when given, short-circuits the underlying harvest (see
+    `_harvest_placements`) and is COMPOSED here with the very materializability
+    predicate this function post-filters on, so the early exit can only ever
+    fire on a candidate that survives that filter. Uncomposed, the two run in
+    the wrong order: `stop_when` is evaluated inside `place_demands`, BEFORE
+    the filter below, so a NON-materializable full-rate candidate (e.g. a groom
+    onto a lightpath with no bound IP link -- which `_residual_gbps`
+    deliberately credits with its full mode rate) would satisfy it, truncate
+    the frontier, and only then be dropped by the filter. The already-truncated
+    list comes back empty and a demand that a materializable candidate further
+    down the frontier would have carried reads as "no feasible route"."""
+    def _stop_materializable(p) -> bool:
+        return stop_when(p) and _objective.placement_materializable(model, p)
+
+    placements = _harvest_placements(
+        model, qot, g, src, dst, demand_gbps, k,
+        fill_policy=fill_policy, grid=grid,
+        stop_when=None if stop_when is None else _stop_materializable)
     return [p for p in placements if _objective.placement_materializable(model, p)]
 
 
@@ -500,23 +518,30 @@ def _pack(
         # grid instance is threaded through both calls (S7-12 fix) so the graph
         # build and the placement probe never desync on grid choice.
         grid = SpectrumGrid.default()
+
+        def _harvest_unfiltered():
+            """Re-harvest over the graph with NO min_residual_gbps filter: the
+            degraded grooming options the filter pruned are legitimate output
+            (restoration / best-effort). The repeated (path, direction) probes
+            are served by the harvest cache, so a second pass is close to free.
+            Both of this demand's fallbacks below go through here."""
+            return _harvest_alloc(
+                work, qot, build_layered_graph(work, grid=grid),
+                src, dst, gbps, fill_policy=fill_policy, grid=grid,
+                stop_when=stop_when)
+
         # Filter grooming targets by the demand's own size. A Placement is one
         # route, so a groomed leg bottlenecks the WHOLE demand -- a lightpath
         # that cannot carry `gbps` cannot be part of a full-rate answer.
+        narrowed = True                # the capacity-filtered graph is in use
         g = build_layered_graph(work, grid=grid, min_residual_gbps=gbps)
         cands = _harvest_alloc(work, qot, g, src, dst, gbps,
                                fill_policy=fill_policy, grid=grid,
                                stop_when=stop_when)
         if not cands:
-            # Nothing can carry the demand in full. Degraded placements remain
-            # legitimate output (restoration / best-effort), so re-harvest over
-            # the unfiltered graph before giving up. The repeated (path,
-            # direction) probes are served by the harvest cache, so the second
-            # pass is close to free.
-            g = build_layered_graph(work, grid=grid)
-            cands = _harvest_alloc(work, qot, g, src, dst, gbps,
-                                   fill_policy=fill_policy, grid=grid,
-                                   stop_when=stop_when)
+            # Nothing can carry the demand in full -- fall back before giving up.
+            narrowed = False
+            cands = _harvest_unfiltered()
         if not cands:
             unplaced.append((did, "no feasible route"))
             continue
@@ -525,6 +550,22 @@ def _pack(
             basis, level, be = _demand_constraints(d)
             pp = disjoint_pairs(work, cands, basis=basis, level=level,
                                 best_effort=be, top_n=1, endpoints=(src, dst))
+            if not pp and narrowed:
+                # Same rule as the empty-candidate fallback above -- "filtering
+                # must narrow the search, never remove the only answer" -- but
+                # one level up, and only reachable on the protected branch. A
+                # NON-empty candidate set is not enough here: disjoint_pairs
+                # searches WITHIN the set, so a set the filter merely narrowed
+                # (rather than emptied) can still have lost the one degraded
+                # groom that was the protection leg's only disjoint option. Retry
+                # once over the unfiltered graph before declaring the demand
+                # unplaced. `stop_when` is None on this branch, so this is purely
+                # about min_residual_gbps.
+                cands = _harvest_unfiltered()
+                if cands:
+                    pp = disjoint_pairs(work, cands, basis=basis, level=level,
+                                        best_effort=be, top_n=1,
+                                        endpoints=(src, dst))
             if not pp:
                 unplaced.append((did, "no disjoint feasible pair"))
                 continue

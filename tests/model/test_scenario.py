@@ -355,7 +355,7 @@ def test_german_17_end_to_end_real_adapter():
     # probes. build_operating_network's default fill_policy=FillPolicy.FULL
     # means every probe in this scenario is full-grid and now routes through
     # harvest_cache's fast path instead (confirmed by
-    # tests/model/test_propagation_budget.py's harvest=352/compute=0 split for
+    # tests/model/test_propagation_budget.py's harvest=69/compute=0 split for
     # this same demand set) -- so QoTCache legitimately sees zero calls here.
     # That is the intended effect of wiring harvest_cache in, not a bug, so it
     # is reported rather than asserted on.

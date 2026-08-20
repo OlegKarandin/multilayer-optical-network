@@ -523,3 +523,97 @@ def test_protected_pack_still_finds_a_disjoint_pair():
     res = solve_allocation(_two_routes(), _hi_qot(), [demand], {"A": 10, "Z": 10})
     assert len(res.placements) == 1, f"unplaced={res.unplaced}"
     assert res.placements[0].shortfall_gbps == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Whole-branch review, Finding 1: `stop_when` must not truncate the frontier
+# ahead of the materializability filter (`_harvest_alloc`).
+# ---------------------------------------------------------------------------
+
+from multilayer_optical_network.model.assets import Lightpath
+from multilayer_optical_network.model.ip_assets import IPLink
+
+
+def _ghost_groom_model() -> NetworkModel:
+    """`_two_routes` plus a lightpath with NO bound IP link. `_residual_gbps`
+    credits such a lightpath with its FULL mode rate (400G here), so a groom
+    onto it looks like a full-rate answer to `stop_when` -- while
+    `placement_materializable` rejects it, because there is no IPLink for
+    `apply_candidate` to stitch an ip_path segment from."""
+    n = _two_routes()
+    n.add_lightpath(Lightpath("lp-ghost", ("oms-north",), "400G", 193.4e12))
+    n.set_qot_state("lp-ghost",
+                    QoTState(gsnr_db=16.0, osnr_db=30.0, margin_db=1.0))
+    return n
+
+
+def test_stop_when_does_not_truncate_before_the_materializability_filter():
+    """The early exit runs INSIDE place_demands; the materializability filter
+    runs after `_harvest_placements` returns. Uncomposed, the cheap groom onto
+    the IP-link-less `lp-ghost` satisfies `shortfall <= 0`, ends the search,
+    and is then filtered out -- emptying an already-truncated list and turning
+    a placeable demand into "no feasible route"."""
+    n = _ghost_groom_model()
+    res = solve_allocation(n, _hi_qot(),
+                           [{"id": "d1", "src": "A", "dst": "Z",
+                             "demand_gbps": 100.0}],
+                           spare_inventory={"A": 10, "Z": 10})
+
+    assert res.status is SolverStatus.SOLUTION, f"unplaced={res.unplaced}"
+    p = res.placements[0]
+    assert p.reused_lightpaths == (), "lp-ghost has no IP link; it is not usable"
+    assert p.new_lightpaths, "expected the materializable new-lightpath candidate"
+    assert p.shortfall_gbps == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Whole-branch review, Finding 2: the min_residual_gbps filter needs a fallback
+# on the PROTECTED branch too, not only when it empties the candidate list.
+# ---------------------------------------------------------------------------
+
+
+def _narrowed_protection_model() -> NetworkModel:
+    """`_two_routes` where the south route is reachable ONLY by grooming onto a
+    30G-residual survivor (`_south_dark_qot` puts every NEW run on oms-south
+    below the lowest mode's required GSNR). A 40G demand's capacity filter
+    (`min_residual_gbps=40`) prunes that 30G LPE edge, so the FILTERED candidate
+    set collapses onto oms-north alone and holds no disjoint pair."""
+    n = _two_routes()
+    n.add_lightpath(Lightpath("lp-south", ("oms-south",), "100G", 193.4e12))
+    n.set_qot_state("lp-south",
+                    QoTState(gsnr_db=16.0, osnr_db=30.0, margin_db=1.0))
+    n.add_ip_link(IPLink("ip-south", "r_A", "r_Z", "lp-south"))
+    n.add_service(Service("s-load", "r_A", "r_Z", 70.0,
+                          working_path=("ip-south",)))     # residual 100-70 = 30
+    return n
+
+
+def _south_dark_qot() -> FakeQot:
+    # 4.0 dB is below 100G's required 5.0 dB, so _best_feasible_mode returns
+    # None for any NEW run on oms-south. Grooming needs no QoT call, so the
+    # existing lp-south survivor stays usable.
+    return FakeQot({("oms-north",): 16.0, ("oms-south",): 4.0})
+
+
+def test_protected_falls_back_to_the_unfiltered_graph_for_the_disjoint_pair():
+    """"Filtering must narrow the search, never remove the only answer" applies
+    to disjoint_pairs too: a NON-empty but narrowed candidate set can still have
+    lost the only disjoint option, and the empty-candidates fallback never
+    fires for it. The unfiltered set still has the degraded south groom, so the
+    protected demand places (degraded) instead of going unplaced."""
+    n = _narrowed_protection_model()
+    res = solve_allocation(n, _south_dark_qot(),
+                           [{"id": "d1", "src": "A", "dst": "Z",
+                             "demand_gbps": 40.0, "protected": True}],
+                           spare_inventory={"A": 10, "Z": 10})
+
+    assert len(res.placements) == 1, f"unplaced={res.unplaced}"
+    p = res.placements[0]
+    work_oms = ({o for r in p.new_lightpaths for o in r.oms_sequence}
+                | {"oms-south" for lp in p.reused_lightpaths if lp == "lp-south"})
+    prot_oms = ({o for r in p.protection_new for o in r.oms_sequence}
+                | {"oms-south" for lp in p.protection_reused if lp == "lp-south"})
+    assert work_oms and prot_oms and work_oms.isdisjoint(prot_oms), (
+        f"expected a genuinely disjoint pair, got {work_oms} / {prot_oms}")
+    assert "oms-south" in (work_oms | prot_oms), (
+        "one leg must be the degraded south groom the filter had pruned")
