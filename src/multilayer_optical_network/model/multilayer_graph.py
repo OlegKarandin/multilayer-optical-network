@@ -61,7 +61,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, Iterator, List, Optional, Tuple
+from typing import Callable, Dict, FrozenSet, Iterator, List, Optional, Tuple
 
 import networkx as nx
 
@@ -428,6 +428,7 @@ def place_demands(
     src: str, dst: str, demand_gbps: float, policy: str,
     k: int = _DEFAULT_K, grid: Optional[SpectrumGrid] = None,
     fill_policy: FillPolicy = None,
+    stop_when: Optional[Callable[[Placement], bool]] = None,
 ) -> List[Placement]:
     """IGABAG for one demand, returning up to `k` DISTINCT feasible placements
     (the cost-ordered frontier under the policy), each possibly degraded. A
@@ -435,7 +436,15 @@ def place_demands(
     RxE), or BOTH (a hybrid). Empty list when no feasible path exists.
 
     `fill_policy` selects the acceptance-probe reference loading passed to
-    `_build_loading` (defaults to FULL — see FillPolicy)."""
+    `_build_loading` (defaults to FULL — see FillPolicy).
+
+    `stop_when`, when given, is a predicate over an accepted Placement: as soon
+    as one is found for which it is true, enumeration stops and that placement
+    is the last one returned (early-exit, not a hard k=1 — the frontier is
+    still cost-ordered, it's just truncated at the first acceptable answer).
+    `None` (the default) enumerates the full `k`-best frontier, i.e. today's
+    behaviour — used by callers (route_service, restoration) that need to rank
+    or search within the whole candidate set."""
     from .allocation import _build_loading, _best_feasible_mode
     from ..gnpy_adapter.loading import Channel, LoadingState
     if fill_policy is None:
@@ -544,10 +553,16 @@ def place_demands(
             restored = min(demand_gbps, groom_cap, new_cap)
             if restored <= 0.0:
                 continue
-            out.append(Placement(
+            placement = Placement(
                 reused_lightpaths=tuple(reused),
                 new_lightpaths=tuple(realized),
                 restored_gbps=restored,
                 shortfall_gbps=max(0.0, demand_gbps - restored),
-            ))
+            )
+            out.append(placement)
+            if stop_when is not None and stop_when(placement):
+                # A caller that needs one acceptable answer, not a ranked set.
+                # Every further route costs two GNPy propagations (forward and
+                # backward, via _best_feasible_mode) and would be discarded.
+                return out
     return out

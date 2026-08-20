@@ -12,7 +12,7 @@ resulting cycle (docs/2026-07-19-open-todos.md #4, "layering inversion").
 """
 from __future__ import annotations
 
-from typing import FrozenSet, Optional
+from typing import Callable, FrozenSet, Optional
 
 from .network import NetworkModel
 from .multilayer_graph import Placement, place_demands
@@ -73,6 +73,7 @@ def _harvest_placements(
     model, qot, g, src, dst, demand_gbps, k,
     fill_policy: FillPolicy = FillPolicy.FULL,
     grid: Optional[SpectrumGrid] = None,
+    stop_when: Optional[Callable[[Placement], bool]] = None,
 ) -> list:
     """groom_or_new + new_only frontiers over *g*, deduped on the lambda-free
     route identity (reused lightpath ids + new runs' oms_sequences) so a
@@ -81,16 +82,27 @@ def _harvest_placements(
     allocation's packer -- previously two independently drifting copies
     (docs/2026-07-19-open-todos.md #4). `grid`, when passed, must be the SAME
     SpectrumGrid instance used to build *g* (S7-12 fix) — see the callers in
-    route_service.py / allocation.py."""
+    route_service.py / allocation.py.
+
+    `stop_when`, when given, is threaded into `place_demands` for early exit
+    within a policy; once `groom_or_new` has produced an accepted placement,
+    `new_only` is skipped entirely (it would only re-run the whole Yen
+    enumeration to be deduped away). `None` (the default) preserves the full
+    two-policy frontier — the behaviour route_service/restoration depend on."""
     out: list = []
     seen: set = set()
     for policy in ("groom_or_new", "new_only"):
         for p in place_demands(model, g, qot, src=src, dst=dst,
                                demand_gbps=demand_gbps, policy=policy, k=k,
-                               fill_policy=fill_policy, grid=grid):
+                               fill_policy=fill_policy, grid=grid,
+                               stop_when=stop_when):
             key = (p.reused_lightpaths, tuple(r.oms_sequence for r in p.new_lightpaths))
             if key in seen:
                 continue
             seen.add(key)
             out.append(p)
+        if stop_when is not None and any(stop_when(p) for p in out):
+            # groom_or_new already produced an acceptable answer; new_only would
+            # re-run the whole Yen enumeration to be deduped away.
+            break
     return out

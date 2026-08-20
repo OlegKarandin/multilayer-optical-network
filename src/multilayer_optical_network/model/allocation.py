@@ -19,7 +19,7 @@ by synthesizing a Service per demand on a clone and committing it through the re
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Protocol, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Protocol, Sequence, Tuple
 
 from .assets import Direction
 from .ip_assets import Service
@@ -33,7 +33,7 @@ from .spectrum import (
     SpectrumGrid, build_spectrum_state, first_fit_slot, occupied_along, reserve,
     FillPolicy,
 )
-from .multilayer_graph import build_layered_graph, NewLightpathRun
+from .multilayer_graph import build_layered_graph, NewLightpathRun, Placement
 from .multilayer_disjoint import disjoint_pairs
 from .placement_common import _lever, _status, _harvest_placements
 from . import objective as _objective
@@ -375,14 +375,17 @@ def _merge_need(a: Dict[str, int], b: Dict[str, int]) -> Dict[str, int]:
 
 def _harvest_alloc(model, qot, g, src, dst, demand_gbps, k=_ROUTE_CAP,
                    fill_policy: FillPolicy = FillPolicy.FULL,
-                   grid: Optional[SpectrumGrid] = None):
+                   grid: Optional[SpectrumGrid] = None,
+                   stop_when: Optional[Callable[[Placement], bool]] = None):
     """allocation's materializable-only view of the shared groom_or_new +
     new_only harvest (placement_common._harvest_placements): filters out any
     placement whose new run ends at a router-less optical node or whose reused
     lightpath has no bound IP link, same as route_service's post-harvest
-    filter."""
+    filter. `stop_when`, when given, short-circuits the underlying harvest --
+    see `_harvest_placements`."""
     placements = _harvest_placements(model, qot, g, src, dst, demand_gbps, k,
-                                     fill_policy=fill_policy, grid=grid)
+                                     fill_policy=fill_policy, grid=grid,
+                                     stop_when=stop_when)
     return [p for p in placements if _objective.placement_materializable(model, p)]
 
 
@@ -485,6 +488,11 @@ def _pack(
                       dst_router=site_to_router[dst], demand_gbps=gbps,
                       working_path=())
 
+        # The unprotected branch takes cands[0] and nothing else, so the first
+        # candidate that carries the demand in full ends the search. The
+        # protected branch needs the whole frontier: disjoint_pairs searches
+        # WITHIN the candidate set for a disjoint pair.
+        stop_when = None if protected else (lambda p: p.shortfall_gbps <= 0.0)
         # Rebuilt every iteration, not hoisted above the loop: `work`'s loading
         # changes each time a demand is placed (a new lightpath lit or a
         # survivor's residual consumed), so a stale graph built before this
@@ -497,7 +505,8 @@ def _pack(
         # that cannot carry `gbps` cannot be part of a full-rate answer.
         g = build_layered_graph(work, grid=grid, min_residual_gbps=gbps)
         cands = _harvest_alloc(work, qot, g, src, dst, gbps,
-                               fill_policy=fill_policy, grid=grid)
+                               fill_policy=fill_policy, grid=grid,
+                               stop_when=stop_when)
         if not cands:
             # Nothing can carry the demand in full. Degraded placements remain
             # legitimate output (restoration / best-effort), so re-harvest over
@@ -506,7 +515,8 @@ def _pack(
             # pass is close to free.
             g = build_layered_graph(work, grid=grid)
             cands = _harvest_alloc(work, qot, g, src, dst, gbps,
-                                   fill_policy=fill_policy, grid=grid)
+                                   fill_policy=fill_policy, grid=grid,
+                                   stop_when=stop_when)
         if not cands:
             unplaced.append((did, "no feasible route"))
             continue

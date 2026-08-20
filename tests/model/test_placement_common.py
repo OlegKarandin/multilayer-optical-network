@@ -115,3 +115,40 @@ def test_harvest_placements_dedupes_across_groom_or_new_and_new_only():
             for p in out}
     assert len(out) == len(seen)      # no duplicate route identity survives
     assert len(out) >= 1
+
+
+from tests.model.test_allocation import _two_routes
+
+
+def test_stop_when_halts_the_frontier_at_the_first_accepted_match():
+    """The frontier is a feasibility filter, not a ranking: a route is not a
+    candidate until physics proves it carries a mode. When the caller needs one
+    full-rate answer, every further candidate is two discarded propagations."""
+    model = _two_routes()
+    g = build_layered_graph(model)
+    full = _harvest_placements(model, _fake_qot(), g, "A", "Z", 50.0, k=8)
+    assert len(full) > 1, "fixture must offer more than one candidate"
+
+    out = _harvest_placements(model, _fake_qot(), g, "A", "Z", 50.0, k=8,
+                              stop_when=lambda p: p.shortfall_gbps <= 0.0)
+    assert len(out) == 1
+    assert out[0] == full[0], "the early exit must not change WHICH candidate wins"
+
+
+def test_stop_when_none_returns_the_whole_frontier():
+    """route_service and restoration pass no predicate and must be untouched."""
+    model = _two_routes()
+    g = build_layered_graph(model)
+    out = _harvest_placements(model, _fake_qot(), g, "A", "Z", 50.0, k=8,
+                              stop_when=None)
+    assert len(out) > 1
+
+
+def test_stop_when_falls_through_to_the_full_frontier_when_nothing_matches():
+    """A predicate no candidate satisfies must cost nothing and hide nothing."""
+    model = _two_routes()
+    g = build_layered_graph(model)
+    full = _harvest_placements(model, _fake_qot(), g, "A", "Z", 50.0, k=8)
+    out = _harvest_placements(model, _fake_qot(), g, "A", "Z", 50.0, k=8,
+                              stop_when=lambda p: False)
+    assert out == full

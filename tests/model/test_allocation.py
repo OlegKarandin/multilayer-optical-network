@@ -484,3 +484,42 @@ def test_pack_falls_back_to_the_unfiltered_graph_when_nothing_can_carry_the_dema
     p = res.placements[0]
     assert p.reused_lightpaths == ("lp-AB",)
     assert p.restored_gbps == 30.0 and p.shortfall_gbps == 10.0
+
+
+def _counting_qot(inner=None):
+    """Wrap a FakeQot and record how many times the packer asked physics."""
+    inner = inner or _hi_qot()
+    calls = {"n": 0}
+
+    def _eval(*, oms_sequence, direction, mode_id, loading):
+        calls["n"] += 1
+        return inner(oms_sequence=oms_sequence, direction=direction,
+                     mode_id=mode_id, loading=loading)
+    return _eval, calls
+
+
+def test_unprotected_pack_asks_physics_less_than_protected():
+    """_pack's unprotected branch reads cands[0] and nothing else; the
+    protected branch needs the whole set, because disjoint_pairs searches for a
+    disjoint pair WITHIN the candidate list."""
+    demand = {"id": "d1", "src": "A", "dst": "Z", "demand_gbps": 50.0}
+
+    qot_u, calls_u = _counting_qot()
+    solve_allocation(_two_routes(), qot_u, [dict(demand)], {"A": 10, "Z": 10})
+
+    qot_p, calls_p = _counting_qot()
+    solve_allocation(_two_routes(), qot_p, [dict(demand, protected=True)],
+                     {"A": 10, "Z": 10})
+
+    assert calls_u["n"] < calls_p["n"], (
+        f"unprotected={calls_u['n']} protected={calls_p['n']}: the early exit "
+        f"must cut work on the unprotected branch and only there")
+
+
+def test_protected_pack_still_finds_a_disjoint_pair():
+    """The frontier the protected branch needs must survive this change."""
+    demand = {"id": "d1", "src": "A", "dst": "Z", "demand_gbps": 50.0,
+              "protected": True}
+    res = solve_allocation(_two_routes(), _hi_qot(), [demand], {"A": 10, "Z": 10})
+    assert len(res.placements) == 1, f"unplaced={res.unplaced}"
+    assert res.placements[0].shortfall_gbps == 0.0

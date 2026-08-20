@@ -43,7 +43,15 @@ from tests.conftest import FIXTURES_DIR
 # queried in only one direction during this solve (no counterpart request
 # exists to alias against) -- verified by instrumenting harvest_cache_key
 # call sites during a real solve_allocation_model run on this fixture.
-PROPAGATION_BUDGET = 179
+#
+# 179 -> 69 (Task 5, perf(alloc): stop the frontier at the first full-rate
+# candidate): _pack's unprotected branch (~70% of the frozen 22-demand set)
+# now passes stop_when=lambda p: p.shortfall_gbps <= 0.0 into the harvest, so
+# enumeration stops at the first candidate that carries the demand in full
+# instead of exhausting the whole k-best frontier across both groom_or_new and
+# new_only. Protected demands are unaffected (stop_when=None there --
+# disjoint_pairs needs the full frontier).
+PROPAGATION_BUDGET = 69
 
 _STUB_GSNR_DB = 30.0
 
