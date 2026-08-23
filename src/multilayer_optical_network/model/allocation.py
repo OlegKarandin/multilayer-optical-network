@@ -160,13 +160,21 @@ class AdapterEvaluator:
         amp chain's noise for a backward query. `endpoint_noise_lin`, however,
         is called with the ORIGINAL *oms_sequence* + *direction*, NOT `seq`:
         `endpoint_noise_lin`'s own `_terminal_roadm_ids` helper does its OWN
-        BACKWARD resolution internally, so passing the already-reversed `seq`
-        would double-reverse and silently resolve the FORWARD path's terminal
-        ROADMs for what is supposed to be a backward endpoint term (invisible
-        on a symmetric add_drop_osnr fixture, wrong on a heterogeneous one).
-        This mirrors exactly how `adapter._propagate_loading`'s own capture
-        path calls `endpoint_noise_lin` -- with its own `oms_sequence`
-        parameter, never its locally-resolved `rev_seq`."""
+        BACKWARD resolution internally, so it needs the original, not the
+        pre-reversed, sequence as input. Passing `seq` instead would happen to
+        produce the SAME numeric endpoint term either way -- the terminal-ROADM
+        sum is order-independent over the unordered {add, drop} pair
+        (`composition.py`'s `for rid in (add_id, drop_id): penalties += ...`),
+        and `reverse_oms_sequence` is a true involution, so double-reversing
+        recovers the same unordered pair with the add/drop labels merely
+        swapped, which the sum doesn't distinguish -- so this is NOT a
+        numeric-correctness requirement. It is chosen because it (a) mirrors
+        `adapter._propagate_loading`'s own capture path exactly, which calls
+        `endpoint_noise_lin` with its own `oms_sequence` parameter, never its
+        locally-resolved `rev_seq`, and (b) avoids a second, redundant
+        `reverse_oms_sequence` call that would double the surface for hitting
+        that function's `ValueError` on a topology with ambiguous
+        parallel-route pairing on the reverse chain's own siblings."""
         if self._increments is None:
             return None
         seq = oms_sequence
