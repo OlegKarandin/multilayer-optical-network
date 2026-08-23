@@ -35,10 +35,11 @@ from ..model.assets import Direction
 from ..model.optical_network import OpticalNetworkModel
 from .adapter import _oms_fingerprint_parts
 from .synthesize import SI_TX_OSNR_DB
-from .translate import reverse_oms_sequence
+from .translate import DEFAULT_TX_OSNR_DB, reverse_oms_sequence
 
 __all__ = [
     "SI_TX_OSNR_DB",
+    "DEFAULT_TX_OSNR_DB",
     "oms_fingerprint",
     "endpoint_noise_lin",
     "endpoint_key",

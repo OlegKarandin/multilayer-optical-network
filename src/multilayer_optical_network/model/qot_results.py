@@ -106,3 +106,41 @@ class HarvestCache:
         self._store.move_to_end(key)
         while len(self._store) > self._maxsize:
             self._store.popitem(last=False)
+
+
+class IncrementCache:
+    """Bounded LRU of per-OMS ``1/gsnr_lin`` increment vectors, keyed by
+    ``gnpy_adapter.composition.oms_fingerprint(model, oms_id)`` -- a single OMS's
+    own physical fingerprint, not a path's. Populated from the SAME capture pass
+    that already backs ``HarvestCache`` (``adapter._propagate_loading(...,
+    capture_increments=True)``), so a K-hop harvest calibrates K entries here in
+    one propagation, and any FUTURE path that reuses any of those K OMS -- in any
+    order, any combination -- can compose its own GSNR from cached increments
+    without a fresh propagation (see ``gnpy_adapter/composition.py``'s module
+    docstring for the composition identity `AdapterEvaluator.compose_gsnr` reads
+    this table through).
+
+    Content-addressed like ``HarvestCache``/``QoTCache``: a changed physical
+    input flips the fingerprint, so there is no invalidation logic -- a stale
+    entry for an old fingerprint simply stops being looked up again and ages out
+    via the bounded LRU, same discipline as ``HarvestCache``."""
+
+    def __init__(self, maxsize: int = 4096) -> None:
+        self._store: "OrderedDict[Any, Dict[int, float]]" = OrderedDict()
+        self._maxsize = maxsize
+        self.hits = 0
+        self.misses = 0
+
+    def get(self, key: Any) -> Optional[Dict[int, float]]:
+        if key not in self._store:
+            self.misses += 1
+            return None
+        self._store.move_to_end(key)
+        self.hits += 1
+        return self._store[key]
+
+    def put(self, key: Any, value: Dict[int, float]) -> None:
+        self._store[key] = value
+        self._store.move_to_end(key)
+        while len(self._store) > self._maxsize:
+            self._store.popitem(last=False)

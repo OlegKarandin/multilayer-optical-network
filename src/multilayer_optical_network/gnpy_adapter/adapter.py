@@ -928,7 +928,9 @@ def harvest_qot(
     direction: Direction,
     mode_id: str,
     full_comb: LoadingState,
-) -> dict[int, QoTState]:
+    *,
+    capture_increments: bool = False,
+) -> "dict[int, QoTState] | tuple[dict[int, QoTState], dict[str, dict[int, float]]]":
     """Propagate a full-grid *full_comb* loading once and harvest every carrier's
     GSNR/OSNR, keyed by grid slot — the mechanism that makes ``FillPolicy.FULL``
     cheap: one propagation instead of one per candidate probe frequency.
@@ -942,7 +944,14 @@ def harvest_qot(
     config, the topmost grid slot is always dropped) — callers must check
     membership (``slot in vec``) rather than assume every requested slot comes
     back.
-    """
+
+    *capture_increments*, when True, additionally returns the per-OMS
+    ``1/gsnr_lin`` increment table captured during this SAME propagation (see
+    ``gnpy_adapter/composition.py``), as ``(vec, increments)`` instead of the
+    bare ``vec`` — the composition capture path
+    (``model.allocation.AdapterEvaluator.__call__``) is the only caller that
+    passes this. False (the default) preserves today's bare-dict return for
+    every existing caller unchanged."""
     from ..model.spectrum import SpectrumGrid
 
     grid = SpectrumGrid.default()
@@ -954,7 +963,8 @@ def harvest_qot(
     loading_sorted = LoadingState(channels=sorted_channels)
 
     pr = _propagate_loading(model, oms_sequence, direction, loading_sorted, mode,
-                            probe_idx=0)  # probe_idx only feeds discarded snapshots
+                            probe_idx=0,  # probe_idx only feeds discarded snapshots
+                            capture_increments=capture_increments)
 
     # Read carrier positions back from the *propagated* SI rather than trusting
     # positional alignment with sorted_channels: a carrier can be dropped along
@@ -975,6 +985,8 @@ def harvest_qot(
             margin_db=gsnr_db - mode.required_gsnr_db - model.design_margin_db,
             limiting_element_id=None,
         )
+    if capture_increments:
+        return out, pr.oms_increments
     return out
 
 
