@@ -114,6 +114,18 @@ def _extract_gsnr_osnr(si, idx: int) -> Tuple[float, float]:
     return gsnr_db, osnr_db
 
 
+def _inverse_linear_gsnr(si):
+    """1/GSNR per carrier, linear, as a numpy array. The quantity that accumulates
+    additively along a path -- `_extract_gsnr_osnr` returns the same thing per carrier
+    in dB, one index at a time; this is the whole-comb form the increment capture
+    needs, so a boundary costs one array op rather than one call per carrier.
+
+    Denominator verified against `_extract_gsnr_osnr` above (`sig / (ase + nli)`
+    for the linear GSNR itself): this is its reciprocal, `(ase + nli) / sig`."""
+    import numpy as np
+    return (np.asarray(si.ase) + np.asarray(si.nli)) / np.asarray(si.signal)
+
+
 def _path_elements(network, uids: Tuple[str, ...]) -> list:
     """Return gnpy node objects for *uids* in order, raising KeyError on miss."""
     by_uid = {n.uid: n for n in network.nodes}
@@ -163,6 +175,37 @@ def _roadm_successor(network, node):
     return None
 
 
+def _oms_fingerprint_parts(model: OpticalNetworkModel, oms_id: str) -> list:
+    """Physical fingerprint parts for ONE OMS: the ``("oms",)`` boundary marker
+    (carries no identity) plus one tuple per element (amp/fiber/roadm/unknown).
+
+    Shared by ``_path_physical_fingerprint`` (which concatenates one call per OMS
+    in a sequence, in path order) and ``composition.oms_fingerprint`` (which
+    fingerprints a single OMS in isolation, for per-OMS increment cache keys) so
+    the two representations can never drift apart — a change to what counts as
+    GSNR-relevant physics is made once, here, and both callers pick it up."""
+    oms = model.get_oms(oms_id)          # KeyError => caller handles as a miss
+    parts: list = [("oms",)]             # boundary marker, carries no identity
+    for el_id in oms.elements:
+        if el_id in model._amplifiers:
+            a = model._amplifiers[el_id]
+            parts.append(("amp", a.type_variety, a.gain_db, a.nf_db, a.tilt_db))
+        elif el_id in model._fibers:
+            f = model._fibers[el_id]
+            ft = model.get_fiber_type(f.type_variety)
+            parts.append(("fiber", f.length_km, f.extra_loss_db,
+                          ft.type_variety, ft.loss_coef_db_per_km,
+                          ft.dispersion, ft.effective_area, ft.pmd_coef))
+        elif el_id in model._roadms:
+            r = model._roadms[el_id]
+            parts.append(("roadm", r.target_pch_out_db, r.add_drop_osnr_db))
+        else:
+            # Unknown element type: no physics to project, so keep the id.
+            # Conservative — it can only ever cause a miss, never a bad hit.
+            parts.append(("el", el_id))
+    return parts
+
+
 def _path_physical_fingerprint(
     model: OpticalNetworkModel, oms_sequence: Tuple[str, ...], direction: Direction,
 ) -> tuple:
@@ -198,25 +241,7 @@ def _path_physical_fingerprint(
         seq = oms_sequence
     parts: list = []
     for oms_id in seq:
-        oms = model.get_oms(oms_id)          # KeyError => caller handles as a miss
-        parts.append(("oms",))               # boundary marker, carries no identity
-        for el_id in oms.elements:
-            if el_id in model._amplifiers:
-                a = model._amplifiers[el_id]
-                parts.append(("amp", a.type_variety, a.gain_db, a.nf_db, a.tilt_db))
-            elif el_id in model._fibers:
-                f = model._fibers[el_id]
-                ft = model.get_fiber_type(f.type_variety)
-                parts.append(("fiber", f.length_km, f.extra_loss_db,
-                              ft.type_variety, ft.loss_coef_db_per_km,
-                              ft.dispersion, ft.effective_area, ft.pmd_coef))
-            elif el_id in model._roadms:
-                r = model._roadms[el_id]
-                parts.append(("roadm", r.target_pch_out_db, r.add_drop_osnr_db))
-            else:
-                # Unknown element type: no physics to project, so keep the id.
-                # Conservative — it can only ever cause a miss, never a bad hit.
-                parts.append(("el", el_id))
+        parts.extend(_oms_fingerprint_parts(model, oms_id))
     # S4-4 terminal drop ROADM (appended in compute_qot; embedded so a differing
     # drop ROADM keys distinctly).
     if seq:
@@ -261,6 +286,8 @@ class _PropResult(NamedTuple):
     snapshots: list
     final_gsnr_db: float
     final_osnr_db: float
+    oms_increments: dict = {}     # oms_id -> {slot: 1/gsnr_lin added by this OMS}
+    endpoint_lin: dict = {}       # slot -> analytic terminal-ROADM + tx_osnr noise
 
 
 def _propagate_loading(
@@ -273,10 +300,18 @@ def _propagate_loading(
     *,
     topo_path: Optional[Path] = None,
     eqpt_path: Optional[Path] = None,
+    capture_increments: bool = False,
 ) -> "_PropResult":
     """Resolve the path, build the SI from *loading_for_gnpy*, propagate through
     every element, and return the final SI plus per-element snapshots taken at
-    *probe_idx*. Shared by compute_qot (one probe) and harvest_qot (all slots)."""
+    *probe_idx*. Shared by compute_qot (one probe) and harvest_qot (all slots).
+
+    *capture_increments*, when True, additionally differences the accumulated
+    ``1/gsnr_lin`` at each OMS boundary (the composition capture path — see
+    ``gnpy_adapter/composition.py``) and computes the analytic endpoint term,
+    populating ``_PropResult.oms_increments``/``endpoint_lin``. False (the
+    default) leaves both ``{}`` and costs nothing extra — every existing caller
+    is unaffected."""
     # ------------------------------------------------------------------ setup
     from .synthesize import build_gnpy_network, gnpy_design_network
     if topo_path is not None or eqpt_path is not None:
@@ -335,6 +370,26 @@ def _propagate_loading(
     # per element inside the loop from the walk order + transceiver neighbors).
     from gnpy.core.elements import Roadm as _GnpyRoadm
 
+    # Per-OMS increment capture (composition). 1/GSNR accumulates ADDITIVELY over OMS
+    # and an express ROADM preserves it exactly (verified on an element trace: the
+    # accumulated 1/gsnr_lin is bit-identical either side of an interior ROADM), so
+    # differencing the accumulated value at OMS boundaries gives each OMS's own
+    # contribution -- with no endpoint chain double-counted, which is what makes this
+    # correct where summing standalone single-OMS harvests is not. Captured for EVERY
+    # carrier, not just the probe: under FULL the comb is dense but GSNR still varies
+    # with position in band, which is exactly why harvest_qot is per-slot.
+    boundary_at: dict[int, str] = {}
+    grid = None
+    if capture_increments:
+        from ..model.spectrum import SpectrumGrid
+        grid = SpectrumGrid.default()
+        pos = 0
+        for oms_id in (rev_seq if direction is Direction.BACKWARD else oms_sequence):
+            pos += len(model.get_oms(oms_id).elements)
+            boundary_at[pos - 1] = oms_id       # index of this OMS's LAST element
+    prev_noise = None                            # np array, one entry per carrier
+    oms_increments: dict[str, dict[int, float]] = {}
+
     prev_gsnr_db = math.inf
     snapshots: list[ElementSnapshot] = []
     _roadm_propagated: set[str] = set()
@@ -361,6 +416,15 @@ def _propagate_loading(
                 _roadm_propagated.add(uid)
         else:
             si = el(si)
+
+        if capture_increments and i in boundary_at:
+            noise = _inverse_linear_gsnr(si)     # vectorised over carriers
+            delta = noise if prev_noise is None else noise - prev_noise
+            oms_increments[boundary_at[i]] = {
+                grid.slot_of(float(f)): float(d)
+                for f, d in zip(si.frequency, delta)
+            }
+            prev_noise = noise
 
         gsnr_db, osnr_db = _extract_gsnr_osnr(si, probe_idx)
 
@@ -394,8 +458,30 @@ def _propagate_loading(
     final_gsnr_db = prev_gsnr_db if math.isfinite(prev_gsnr_db) else math.inf
     final_osnr_db = snapshots[-1].osnr_db_after if snapshots else math.inf
 
+    # Endpoint term (composition's N_endpoint): analytic, so it takes no part in
+    # the element loop above -- computed per carrier from the model/mode plus
+    # that carrier's own *propagated* tx_osnr (si.tx_osnr[i]), NOT the equipment
+    # SI block's declared value (`synthesize.SI_TX_OSNR_DB`, currently 40):
+    # `build_si_for_loading` (translate.py) has its OWN default of 35 dB and
+    # `_propagate_loading` never overrides it, so every SI this adapter ever
+    # propagates carries tx_osnr=35, not 40 -- `_apply_penalties` reads
+    # `si.tx_osnr[idx]` for exactly this reason (verified empirically: composing
+    # with the equipment-declared 40 undershoots the real per-slot GSNR by the
+    # resulting ~5 dB tx_osnr gap). Slots present mirror harvest_qot's "read
+    # carrier positions back from the propagated SI" discipline, so a
+    # band-edge-filtered carrier correctly has no entry here either.
+    endpoint_lin: dict[int, float] = {}
+    if capture_increments:
+        from .composition import endpoint_noise_lin
+        for i, freq_hz in enumerate(si.frequency):
+            ep = endpoint_noise_lin(model, oms_sequence, direction,
+                                    baud_rate=mode.symbol_rate_baud,
+                                    tx_osnr_db=float(si.tx_osnr[i]))
+            endpoint_lin[grid.slot_of(float(freq_hz))] = ep
+
     return _PropResult(si, uids_list, elements, _roadm_propagated,
-                       mode.symbol_rate_baud, snapshots, final_gsnr_db, final_osnr_db)
+                       mode.symbol_rate_baud, snapshots, final_gsnr_db, final_osnr_db,
+                       oms_increments, endpoint_lin)
 
 
 def _apply_penalties(si, idx, uids_list, elements, roadm_propagated, baud_rate,
