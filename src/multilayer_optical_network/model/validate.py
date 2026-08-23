@@ -34,6 +34,11 @@ class ViolationType(str, Enum):
     DISJOINTNESS_COLLAPSE = "disjointness_collapse"
     PROTECTION_NOT_VIABLE = "protection_not_viable"          # disjoint but unusable failover
     PROTECTION_OVERSUBSCRIBED = "protection_oversubscribed"  # reserved 1:1 capacity double-booked
+    # Not a validate_plan finding -- raised by objective.verify_and_reseed's
+    # post-commit exact-vs-composed audit (Task A6). Kept in this same enum
+    # (rather than a parallel one) because it flows through the identical
+    # typed-violation/views.py machinery as every validate_plan finding.
+    COMPOSITION_ERROR = "composition_error"      # |composed - exact| GSNR > COMPOSITION_ERROR_BOUND_DB
     INVALID_PLAN = "invalid_plan"                # malformed / bad-reference / dup-id op
 
 

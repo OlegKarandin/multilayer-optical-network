@@ -239,8 +239,8 @@ def test_actual_colocated_runs_include_each_others_channel():
     sibling_channel = Channel(grid.freq(run_b.lam), grid.spacing_hz, None, ref_mode)
     loading_correct = LoadingState(loading_alone.channels + (sibling_channel,))
 
-    _, gsnr_alone = _best_feasible_mode(n, qot, run_a.oms_sequence, loading_alone, ref_mode)
-    _, gsnr_correct = _best_feasible_mode(n, qot, run_a.oms_sequence, loading_correct, ref_mode)
+    _, gsnr_alone, _ = _best_feasible_mode(n, qot, run_a.oms_sequence, loading_alone, ref_mode)
+    _, gsnr_correct, _ = _best_feasible_mode(n, qot, run_a.oms_sequence, loading_correct, ref_mode)
 
     # The fix: place_demands now delivers the correct (sibling-inclusive) GSNR.
     assert run_a.gsnr_db == pytest.approx(gsnr_correct, abs=1e-9)

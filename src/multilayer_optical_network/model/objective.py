@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .network import NetworkModel
 from .spectrum import SpectrumGrid, build_spectrum_state
 from .ip_routing import simulate_ip_routing
 from .whatif import margin_threshold_sweep
 from .plan import apply_op, ProvisionLightpath, RerouteService
-from .assets import Lightpath
+from .assets import Direction, Lightpath
 from .ip_assets import IPLink
 from .qot import QoTState
+from .validate import Violation, ViolationType
+from ..gnpy_adapter.composition import COMPOSITION_ERROR_BOUND_DB
+from ..gnpy_adapter.loading import Channel, LoadingState
 
 _PROP_MS_PER_KM = 0.005   # ~5 us/km one-way fiber propagation
 
@@ -404,6 +407,136 @@ def provision_new_runs(work, placement, service, *, prefix) -> Tuple[Tuple[str, 
     for lp_id, state in seeded:
         work.set_qot_state(lp_id, state)
     return ip_path, tuple(seeded)
+
+
+def _full_comb_loading(grid: SpectrumGrid, probe_slot: int, mode_id: str) -> LoadingState:
+    """The same FULL-comb `LoadingState` shape `allocation._build_loading`
+    constructs under `FillPolicy.FULL` (probe channel first, every OTHER grid
+    slot lit regardless of real occupancy) -- reproduced here rather than
+    imported (allocation.py imports this module as `_objective`; importing
+    back would cycle) so `verify_and_reseed`'s exact re-propagation sees the
+    IDENTICAL loading composition was measured against. Only the FULL-comb
+    branch is reproduced: composition itself is gated to FULL loading
+    (`allocation._composed_worse_direction`'s `len(slots) != grid.num_slots`
+    check), so a `NewLightpathRun` this function is ever asked to verify
+    (`gsnr_estimated=True`) was necessarily probed under a full comb -- the
+    ACTUAL-policy branch of `_build_loading` never applies here."""
+    probe = Channel(grid.freq(probe_slot), grid.spacing_hz, None, mode_id)
+    neighbors = tuple(
+        Channel(grid.freq(s), grid.spacing_hz, None, mode_id)
+        for s in range(grid.num_slots) if s != probe_slot
+    )
+    return LoadingState((probe,) + neighbors)
+
+
+def verify_and_reseed(
+    model: NetworkModel, qot, seeded: SeededQoT, placement,
+) -> Tuple[Violation, ...]:
+    """Exact verify pass + composition-error watchdog on ONE accepted
+    Placement's new lightpath runs (Task A6). For every run whose
+    `gsnr_estimated` is True (its `gsnr_db` came from
+    `allocation._best_feasible_mode` COMPOSING cached per-OMS increments,
+    never propagating -- see `NewLightpathRun.gsnr_estimated`'s docstring):
+    re-propagate GSNR exactly (both directions, worse kept, mirroring
+    `_best_feasible_mode`'s own worse-direction contract and using the
+    IDENTICAL full-comb loading composition was measured against --
+    `_full_comb_loading`), overwrite `model`'s stored `QoTState` for that
+    lightpath with the EXACT value, and emit a typed
+    `ViolationType.COMPOSITION_ERROR` finding for any run whose
+    `|composed - exact|` exceeds `COMPOSITION_ERROR_BOUND_DB`.
+
+    A run with `gsnr_estimated=False` already carries an exact value from its
+    OWN acceptance-time propagation (composition never got a chance to run --
+    see `_best_feasible_mode`'s fall-through gates); re-propagating it would
+    spend exactly the call composition exists to save, for no correctness
+    gain, so it is skipped entirely (`continue`, no `qot(...)` call at all).
+
+    Why re-seed the EXACT value here (not just watch it): `QoTState.margin_db`
+    is persisted in the state file, surfaced through the read tool surface,
+    and summed into `evaluate_objective`'s `total_margin` (see this module's
+    own `evaluate_objective`) -- a composed margin left in place would leak a
+    systematically optimistic number to every one of those downstream
+    consumers. Per spec Section 4.4 / Task A5's own docstring, this pass is
+    NOT required for MODE safety -- `_best_feasible_mode`'s
+    `design_margin_db > COMPOSITION_ERROR_BOUND_DB` gate and Task A4's
+    empirical measurement already prove the SELECTED mode stays feasible even
+    at the worst measured composition error. This pass exists for the three
+    OTHER reasons Task A6's spec section gives: an accurate persisted margin,
+    a continuous watchdog on the bound as topologies change, and refeeding
+    the increment table with fresh (exact) values on the very next harvest.
+
+    Parameters: *model* is the clone actually being committed onto
+    (`allocation._pack`'s `work`) -- the exact call site with a real
+    `QotEvaluator` in scope, not a throwaway scoring clone (see the module
+    docstring's placement-of-the-hook note: `apply_candidate`/
+    `provision_new_runs` run once per SCORED CANDIDATE, so verifying there
+    would cost one propagation per candidate rather than per accepted run).
+    *qot* is the same `QotEvaluator` the caller routed the whole solve
+    through (so the exact call still benefits from `cache`/`harvest_cache`
+    memoization across the run, it just cannot reach `compose_gsnr` --
+    `AdapterEvaluator.__call__` never composes, only `compose_gsnr` does).
+    *seeded* is the `(lp_id, QoTState)` sequence `apply_candidate`/
+    `provision_new_runs` returned for *placement* -- both build it with the
+    SAME `enumerate(placement.new_lightpaths)` loop (see their docstrings),
+    so `seeded[i]` and `placement.new_lightpaths[i]` are the same run; zipping
+    them is how this function recovers each run's minted `lp_id` (which
+    `NewLightpathRun` itself does not carry -- it is minted by the provisioner,
+    not the router).
+
+    `Violation` field choices (this call is `_pack`'s post-accept step, not
+    `validate_plan`'s plan-sequence machinery, so the usual
+    `state_index`/`transient` fields don't have a natural multi-state meaning
+    to fall back on here -- documented once, rather than re-derived at every
+    call site):
+      * `state_index=0` -- `verify_and_reseed` runs once per accepted
+        placement, not across a sequence of intermediate plan states, so there
+        is no "which state" question; 0 is the only state that exists here.
+      * `asset_id=lp_id` -- the lightpath actually being verified is the
+        natural "asset" a caller would look up (not the OMS sequence, a
+        composite; not the service id, which can own several independently-
+        checked new runs).
+      * `transient=False` -- this is a direct measurement of the network's
+        actual, just-committed reality (an exact propagation really ran
+        against `model`'s real state), not a plan-intermediate artifact that
+        might resolve itself on a later step -- unlike `validate_plan`'s
+        `transient` findings, there is no "later state" here for it to
+        resolve at."""
+    grid = SpectrumGrid.default()
+    ref_mode_id = model.modes.list()[0].id  # same "registry's first mode" convention
+    # place_demands/_assign_on_route both use (see their own ref_mode/
+    # ref_mode_id locals) -- deterministic given `model`, so recomputing it
+    # here reproduces the EXACT probe composition was measured against
+    # without NewLightpathRun needing to carry it itself.
+    violations: List[Violation] = []
+    for (lp_id, _seeded_state), run in zip(seeded, placement.new_lightpaths):
+        if not run.gsnr_estimated:
+            continue
+        loading = _full_comb_loading(grid, run.lam, ref_mode_id)
+        exact_gsnr = min(
+            qot(oms_sequence=run.oms_sequence, direction=d,
+                mode_id=ref_mode_id, loading=loading).gsnr_db
+            for d in (Direction.FORWARD, Direction.BACKWARD)
+        )
+        required_gsnr_db = model.modes.get(run.mode_id).required_gsnr_db
+        model.set_qot_state(lp_id, QoTState(
+            gsnr_db=exact_gsnr, osnr_db=exact_gsnr,
+            margin_db=exact_gsnr - required_gsnr_db - model.design_margin_db,
+        ))
+        # Task A4's signed-error convention: composed - exact, positive means
+        # composition was optimistic (over-reported GSNR).
+        error_db = run.gsnr_db - exact_gsnr
+        if abs(error_db) > COMPOSITION_ERROR_BOUND_DB:
+            violations.append(Violation(
+                type=ViolationType.COMPOSITION_ERROR,
+                state_index=0, asset_id=lp_id, transient=False,
+                detail={
+                    "composed_gsnr_db": run.gsnr_db,
+                    "exact_gsnr_db": exact_gsnr,
+                    "error_db": error_db,
+                    "bound_db": COMPOSITION_ERROR_BOUND_DB,
+                },
+            ))
+    return tuple(violations)
 
 
 def placement_materializable(model, placement) -> bool:

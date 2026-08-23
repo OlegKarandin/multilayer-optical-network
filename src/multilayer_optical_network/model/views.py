@@ -8,10 +8,10 @@ from .network import NetworkModel
 from . import ip_routing as _ipr
 from .json_safety import safe_float as _safe_float
 from .violations import (
-    DisjointnessCollapseViolation, DroppedTrafficViolation,
-    InvalidPlanViolation, IpLinkOverloadViolation, ModeInfeasibleViolation,
-    ProtectionNotViableViolation, ProtectionOversubscribedViolation,
-    SpectrumClashViolation,
+    CompositionErrorViolation, DisjointnessCollapseViolation,
+    DroppedTrafficViolation, InvalidPlanViolation, IpLinkOverloadViolation,
+    ModeInfeasibleViolation, ProtectionNotViableViolation,
+    ProtectionOversubscribedViolation, SpectrumClashViolation,
 )
 
 
@@ -177,10 +177,16 @@ def placement_result_dict(res) -> Dict[str, Any]:
 
 
 def _new_lp_run(r) -> dict:
-    """Serialize a NewLightpathRun (shared shape with restoration_result_dict)."""
+    """Serialize a NewLightpathRun (shared shape with restoration_result_dict).
+    `gsnr_estimated` (Task A6) answers spec 8.2's open question: whether
+    `gsnr_db` came from composition (optimistic by up to
+    `composition.COMPOSITION_ERROR_BOUND_DB`, not yet exact-verified) rather
+    than a real propagation -- read-only call sites like route_service never
+    reach `objective.verify_and_reseed`'s post-commit correction, so this flag
+    is the only way an agent reading the result can tell the two apart."""
     return {"oms_sequence": list(r.oms_sequence), "lam": r.lam,
             "mode_id": r.mode_id, "gsnr_db": r.gsnr_db,
-            "bitrate_gbps": r.bitrate_gbps}
+            "bitrate_gbps": r.bitrate_gbps, "gsnr_estimated": r.gsnr_estimated}
 
 
 def _allocation_placement(p) -> dict:
@@ -198,11 +204,17 @@ def _allocation_placement(p) -> dict:
 
 def allocation_result_dict(res) -> Dict[str, Any]:
     """Serializer for solve_allocation's Placement-based AllocationResult (distinct
-    from placement_result_dict, which serves solve_rsa's slot-based shape)."""
+    from placement_result_dict, which serves solve_rsa's slot-based shape).
+    `violations` (Task A6) surfaces allocation._pack's post-accept exact-verify
+    watchdog findings (ViolationType.COMPOSITION_ERROR) -- typed, not silently
+    dropped, per CLAUDE.md's "all tool results are structured" rule; usually
+    empty (the watchdog only fires when a composed GSNR's measured error
+    exceeds COMPOSITION_ERROR_BOUND_DB)."""
     return {
         "status": res.status.value,
         "placements": [_allocation_placement(p) for p in res.placements],
         "unplaced": [{"demand_id": did, "reason": r} for did, r in res.unplaced],
+        "violations": [_violation_dict(v) for v in res.violations],
     }
 
 
@@ -318,7 +330,7 @@ def restoration_result_dict(res) -> Dict[str, Any]:
     def _new_lp(r) -> dict:
         return {"oms_sequence": list(r.oms_sequence), "lam": r.lam,
                 "mode_id": r.mode_id, "gsnr_db": r.gsnr_db,
-                "bitrate_gbps": r.bitrate_gbps}
+                "bitrate_gbps": r.bitrate_gbps, "gsnr_estimated": r.gsnr_estimated}
 
     def _cand(c) -> dict:
         return {"lever": c.lever,
@@ -396,6 +408,7 @@ _VIOLATION_MODELS = {
     "disjointness_collapse": DisjointnessCollapseViolation,
     "protection_not_viable": ProtectionNotViableViolation,
     "protection_oversubscribed": ProtectionOversubscribedViolation,
+    "composition_error": CompositionErrorViolation,
     "invalid_plan": InvalidPlanViolation,
 }
 

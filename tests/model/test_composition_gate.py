@@ -112,9 +112,10 @@ def test_actual_fill_policy_never_reaches_composition():
     n = new_model()
     qot = _FakeComposeQot(exact_gsnr=8.0, composed_gsnr=20.0)
     subset_loading = _loading_with_probe(MODE, 20, slots=(18, 19, 20, 21, 22))
-    mode, gsnr = _best_feasible_mode(n, qot, ("oms1",), subset_loading, MODE)
+    mode, gsnr, composed = _best_feasible_mode(n, qot, ("oms1",), subset_loading, MODE)
     assert gsnr == 8.0                    # the EXACT value, not the composed one
     assert qot.compose_count == 0         # composition was never even attempted
+    assert composed is False
 
 
 def test_uncalibrated_oms_forces_an_exact_propagation():
@@ -129,9 +130,10 @@ def test_uncalibrated_oms_forces_an_exact_propagation():
 
     import multilayer_optical_network.model.allocation as alloc
     with patch.object(alloc, "harvest_qot", wraps=alloc.harvest_qot) as spy:
-        mode, gsnr = _best_feasible_mode(n, qot, ("oms1",), loading, MODE)
+        mode, gsnr, composed = _best_feasible_mode(n, qot, ("oms1",), loading, MODE)
     assert spy.call_count == 1            # a REAL propagation ran -- nothing was cached
     assert mode is not None
+    assert composed is False
 
 
 def test_path_longer_than_the_calibrated_range_forces_exact():
@@ -239,8 +241,9 @@ def test_composed_selection_is_genuinely_feasible():
     qot(oms_sequence=seq, direction=Direction.FORWARD, mode_id=MODE, loading=loading)
     qot(oms_sequence=seq, direction=Direction.BACKWARD, mode_id=MODE, loading=loading)
 
-    mode, composed_gsnr = _best_feasible_mode(model, qot, seq, loading, MODE)
+    mode, composed_gsnr, composed = _best_feasible_mode(model, qot, seq, loading, MODE)
     assert mode is not None
+    assert composed is True
     assert composed_gsnr >= mode.required_gsnr_db + model.design_margin_db
 
     # Independent ground truth: a REAL, uncomposed propagation for both

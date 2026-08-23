@@ -86,8 +86,9 @@ def test_mode_selection_respects_the_margin():
 
 def test_no_feasible_mode_under_a_large_margin():
     m = NetworkModel(modes=_MODES, design_margin_db=6.0)
-    mode, gsnr = _best_feasible_mode(m, _Qot(10.4), ("oms-x",), None, "hi")
+    mode, gsnr, composed = _best_feasible_mode(m, _Qot(10.4), ("oms-x",), None, "hi")
     assert mode is None and gsnr == 10.4
+    assert composed is False   # _Qot has no compose_gsnr -- always the exact path
 
 
 def test_margin_gate_drops_ip_capacity_to_zero():

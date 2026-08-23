@@ -306,6 +306,14 @@ class NewLightpathRun:
     # does not derive a reversed lightpath from oms_sequence.
     src_node: str = ""
     dst_node: str = ""
+    # True iff `gsnr_db` came from allocation._best_feasible_mode COMPOSING
+    # cached per-OMS increments (gnpy_adapter/composition.py) rather than a
+    # real propagation -- optimistic by up to COMPOSITION_ERROR_BOUND_DB until
+    # objective.verify_and_reseed re-propagates it exactly (Task A6). Placed
+    # after src_node/dst_node (which already default) rather than keyword-
+    # only, so every existing positional NewLightpathRun(...) call site in
+    # this codebase and its tests keeps compiling unchanged.
+    gsnr_estimated: bool = False
 
 
 @dataclass(frozen=True)
@@ -539,13 +547,15 @@ def place_demands(
                         )
                         if extra:
                             loading = LoadingState(loading.channels + extra)
-                mode, gsnr = _best_feasible_mode(model, qot, oms_seq, loading, ref_mode)
+                mode, gsnr, composed = _best_feasible_mode(
+                    model, qot, oms_seq, loading, ref_mode)
                 if mode is None:
                     feasible = False
                     break
                 realized.append(NewLightpathRun(oms_seq, lam, mode.id, gsnr,
                                                  mode.bitrate_gbps,
-                                                 src_node=run_src, dst_node=run_dst))
+                                                 src_node=run_src, dst_node=run_dst,
+                                                 gsnr_estimated=composed))
                 new_cap = min(new_cap, mode.bitrate_gbps)
             if not feasible:
                 continue

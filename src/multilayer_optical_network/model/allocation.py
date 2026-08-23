@@ -29,6 +29,7 @@ from .qot import QoTState
 from .solvers import (
     OmsPath, SolverStatus, compute_paths, compute_disjoint_paths,
 )
+from .validate import Violation
 from .spectrum import (
     SpectrumGrid, build_spectrum_state, first_fit_slot, occupied_along, reserve,
     FillPolicy,
@@ -265,6 +266,13 @@ class AllocationResult:
     status: SolverStatus
     placements: Tuple[AllocationPlacement, ...] = ()
     unplaced: Tuple[Tuple[str, str], ...] = ()     # (demand_id, reason)
+    # Task A6: objective.verify_and_reseed's post-accept exact-vs-composed
+    # watchdog findings, collected across every demand's accepted placement(s)
+    # in _pack. Typed (never silently dropped -- CLAUDE.md's "all tool
+    # results are structured" rule), almost always empty: it only carries an
+    # entry when a composed run's measured error exceeds
+    # composition.COMPOSITION_ERROR_BOUND_DB.
+    violations: Tuple[Violation, ...] = ()
 
 
 # ----------------------------------------------------------------- core placement
@@ -355,7 +363,16 @@ def _best_feasible_mode(
       * a leg has no paired reverse OMS,
       * `qot` has no `compose_gsnr` at all (every test fake).
     Each of those returns today's exact answer, so the fall-through path is never
-    a behaviour change."""
+    a behaviour change.
+
+    Returns `(mode_or_None, gsnr, composed: bool)` -- the 3rd element is True
+    iff `gsnr` came from `_composed_worse_direction` (never a partial mix of
+    composed-and-exact; that helper itself only returns non-None when BOTH
+    directions composed cleanly). Callers that mint a `NewLightpathRun`
+    (multilayer_graph.place_demands) thread this straight into
+    `NewLightpathRun.gsnr_estimated` (Task A6), which `objective.
+    verify_and_reseed` later reads to decide whether a run needs an exact
+    re-propagation before it is trusted for the stored/persisted margin."""
     composed = _composed_worse_direction(model, qot, oms_sequence, loading, ref_mode_id)
     gsnr = composed if composed is not None else min(
         qot(oms_sequence=oms_sequence, direction=d,
@@ -366,8 +383,8 @@ def _best_feasible_mode(
     feasible = [m for m in model.modes.list()
                 if m.required_gsnr_db + guard <= gsnr]
     if not feasible:
-        return None, gsnr
-    return max(feasible, key=lambda m: m.bitrate_gbps), gsnr
+        return None, gsnr, composed is not None
+    return max(feasible, key=lambda m: m.bitrate_gbps), gsnr, composed is not None
 
 
 def _assign_on_route(
@@ -383,7 +400,11 @@ def _assign_on_route(
         return None
     loading = _build_loading(grid, state, route.oms_sequence, slot, ref_mode_id,
                              fill_policy)
-    mode, gsnr = _best_feasible_mode(model, qot, route.oms_sequence, loading, ref_mode_id)
+    # solve_rsa's flat SpectrumAssignment has no gsnr_estimated field (only
+    # NewLightpathRun, solve_allocation's shape, does -- see Task A6) --
+    # composed-vs-exact is discarded here, not threaded anywhere.
+    mode, gsnr, _composed = _best_feasible_mode(
+        model, qot, route.oms_sequence, loading, ref_mode_id)
     if mode is None:
         return None
     if require_gbps is not None and mode.bitrate_gbps < require_gbps:
@@ -624,6 +645,10 @@ def _pack(
 
     placements: List[AllocationPlacement] = []
     unplaced: List[Tuple[str, str]] = []
+    # Task A6: composition-error watchdog findings from verify_and_reseed,
+    # collected across every demand's accepted placement -- see AllocationResult
+    # .violations' docstring.
+    verify_violations: List[Violation] = []
     # Every (lp_id, QoTState) seeded across the WHOLE run (all demands, both
     # legs). Task 4's cross-lightpath QoT invalidation (any lightpath sharing
     # an OMS with a newly-provisioned one has its QoT wiped) can fire on a
@@ -749,6 +774,7 @@ def _pack(
                 work, pair.protection, svc, prefix="prot")
             apply_op(work, RerouteService(service_id=svc.id, ip_path=protection_ip_path,
                                           which="protection"))
+            new_entries_start = len(all_seeded)
             all_seeded.extend(seeded_working)
             all_seeded.extend(seeded_protection)
             # Per-iteration corrective re-seed (not just once at the end of the
@@ -758,6 +784,28 @@ def _pack(
             # correctly before the NEXT demand routes -- see all_seeded's comment.
             for lp_id, state in all_seeded:
                 work.set_qot_state(lp_id, state)
+            # Task A6: exact verify pass + composition-error watchdog on THIS
+            # demand's just-accepted working/protection runs -- deliberately
+            # placed AFTER the corrective re-seed loop above, not before: that
+            # loop blindly replays all_seeded's (still-COMPOSED) values, so a
+            # verify call made before it would have its exact correction
+            # immediately clobbered back to the composed one. Only runs whose
+            # NewLightpathRun.gsnr_estimated is True cost a propagation here
+            # (see verify_and_reseed's docstring); most placements are exact
+            # already and this is a no-op scan.
+            verify_violations.extend(
+                _objective.verify_and_reseed(work, qot, seeded_working, pair.working))
+            verify_violations.extend(
+                _objective.verify_and_reseed(work, qot, seeded_protection, pair.protection))
+            # Refresh THIS iteration's own all_seeded entries with whatever
+            # verify_and_reseed just wrote (exact-corrected where estimated,
+            # unchanged otherwise), so a LATER demand's corrective re-seed loop
+            # (which blindly replays all_seeded) propagates the EXACT value
+            # forward instead of reverting to the stale composed one it would
+            # otherwise still hold.
+            for i in range(new_entries_start, len(all_seeded)):
+                lp_id, _stale_state = all_seeded[i]
+                all_seeded[i] = (lp_id, work.get_qot_state(lp_id))
             _dec_inv(inv, need)
             placements.append(AllocationPlacement(
                 demand_id=did, lever=_lever(pair.working),
@@ -781,6 +829,7 @@ def _pack(
                 unplaced.append((did, "demand id collides with an existing service"))
                 continue
             seeded_pick = _objective.apply_candidate(work, pick, svc)    # provision+seed+reroute
+            new_entries_start = len(all_seeded)
             all_seeded.extend(seeded_pick)
             # Per-iteration corrective re-seed -- see the protected branch above
             # and all_seeded's comment: this demand's lightpath(s) must already
@@ -788,6 +837,14 @@ def _pack(
             # not just at the very end of the whole loop.
             for lp_id, state in all_seeded:
                 work.set_qot_state(lp_id, state)
+            # Task A6: exact verify pass + watchdog -- see the protected branch
+            # above for why this runs AFTER the corrective re-seed loop and why
+            # all_seeded's own entries are refreshed afterward.
+            verify_violations.extend(
+                _objective.verify_and_reseed(work, qot, seeded_pick, pick))
+            for i in range(new_entries_start, len(all_seeded)):
+                lp_id, _stale_state = all_seeded[i]
+                all_seeded[i] = (lp_id, work.get_qot_state(lp_id))
             _dec_inv(inv, need)
             placements.append(AllocationPlacement(
                 demand_id=did, lever=_lever(pick),
@@ -805,4 +862,5 @@ def _pack(
         work.set_qot_state(lp_id, state)
 
     status = _status(len(placements) > 0, len(unplaced) == 0)
-    return (AllocationResult(status, tuple(placements), tuple(unplaced)), work)
+    return (AllocationResult(status, tuple(placements), tuple(unplaced),
+                             tuple(verify_violations)), work)

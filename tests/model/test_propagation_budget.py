@@ -82,7 +82,28 @@ from tests.conftest import FIXTURES_DIR
 # margin is still 0.0 (Task A1; flips in a later task). This test's physics
 # are entirely stubbed (`_STUB_GSNR_DB`), so that safety gate is moot here --
 # it exercises the counting mechanism only.
-PROPAGATION_BUDGET = 19
+#
+# 19 -> 28 (Task A6, feat(qot): verify the committed placement exactly and
+# watchdog the composition bound): allocation._pack now calls
+# objective.verify_and_reseed once per demand, right after its winning
+# placement is accepted, which re-propagates EXACTLY (both directions) every
+# new lightpath run whose NewLightpathRun.gsnr_estimated is True (i.e. every
+# run this frozen solve actually composed rather than propagated). Of this
+# solve's 23 total new lightpath runs (working + protection legs across all
+# 22 demands), 18 are composed and therefore verified -- 36 additional exact
+# calls in the naive worst case, but the verify calls route through the SAME
+# shared `harvest_cache` the rest of the solve already populated, and most of
+# them land on a fingerprint some earlier candidate-scoring or calibration
+# harvest already cached (a symmetric span's forward/backward alias to one
+# entry -- `harvest_cache_key`'s own docstring). Only 9 of the 36 are genuine
+# cache misses, so the net is +9 (19 -> 28), not +36. This test's physics stub
+# makes composed-vs-exact disagree on almost every verified run (the stub's
+# exact path always returns a flat `_STUB_GSNR_DB`, while the composed path
+# runs REAL endpoint-noise physics over near-zero stubbed increments -- two
+# unrelated numbers by construction here), so `AllocationResult.violations`
+# is non-empty on this fixture; harmless for THIS test (it only pins the
+# propagation count), but not representative of a real composed/exact gap.
+PROPAGATION_BUDGET = 28
 
 _STUB_GSNR_DB = 30.0
 
