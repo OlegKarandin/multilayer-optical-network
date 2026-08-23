@@ -152,13 +152,25 @@ def endpoint_key(
     direction: Direction,
     *,
     baud_rate: float,
+    tx_osnr_db: float,
 ) -> tuple:
     """Content-addressed key for the endpoint term: the two terminal ROADMs'
-    own ``add_drop_osnr_db`` plus *baud_rate* and the fixed SI ``tx_osnr`` --
-    the exact set of inputs ``endpoint_noise_lin`` reads, and nothing else. A
-    terminal ROADM's ``add_drop_osnr_db`` changing (a per-instance ROADM edit)
-    splits this key on its own, content-addressed the same way
-    ``_path_physical_fingerprint``'s keys split on a degraded span."""
+    own ``add_drop_osnr_db`` plus *baud_rate* and *tx_osnr_db* -- the exact set
+    of inputs ``endpoint_noise_lin`` reads, and nothing else. A terminal
+    ROADM's ``add_drop_osnr_db`` changing (a per-instance ROADM edit) splits
+    this key on its own, content-addressed the same way
+    ``_path_physical_fingerprint``'s keys split on a degraded span.
+
+    *tx_osnr_db* is a required caller-supplied parameter, mirroring
+    ``endpoint_noise_lin``'s signature exactly -- NOT defaulted to
+    ``SI_TX_OSNR_DB``. A caller keying a real propagation's endpoint term must
+    pass that propagation's own ``float(si.tx_osnr[i])`` (see
+    ``endpoint_noise_lin``'s docstring for why: ``translate.build_si_for_loading``
+    carries an independent 35 dB default that this adapter never overrides, so
+    ``SI_TX_OSNR_DB`` -- 40, the equipment SI block's declared value -- is not
+    what a real propagation's SI actually carries). Hardcoding
+    ``SI_TX_OSNR_DB`` here would silently alias every real tx_osnr value under
+    a key claiming a tx_osnr no propagation in this adapter ever uses."""
     add_id, drop_id = _terminal_roadm_ids(model, oms_sequence, direction)
     add_r = model._roadms.get(add_id)
     drop_r = model._roadms.get(drop_id)
@@ -166,7 +178,7 @@ def endpoint_key(
         add_r.add_drop_osnr_db if add_r is not None else None,
         drop_r.add_drop_osnr_db if drop_r is not None else None,
         baud_rate,
-        SI_TX_OSNR_DB,
+        tx_osnr_db,
     )
 
 

@@ -16,7 +16,7 @@ from multilayer_optical_network.gnpy_adapter.adapter import (
     _apply_penalties, _extract_gsnr_osnr, _propagate_loading,
 )
 from multilayer_optical_network.gnpy_adapter.composition import (
-    compose_gsnr_db, endpoint_noise_lin, oms_fingerprint,
+    compose_gsnr_db, endpoint_key, endpoint_noise_lin, oms_fingerprint,
 )
 from multilayer_optical_network.gnpy_adapter.loading import Channel, LoadingState
 from multilayer_optical_network.gnpy_adapter.translate import reverse_oms_sequence
@@ -167,3 +167,25 @@ def test_endpoint_term_is_analytic_not_fitted():
         model, seq, Direction.FORWARD, baud_rate=87.5e9, tx_osnr_db=real_tx_osnr_db)
     assert (penalized_inv_lin - raw_inv_lin) == pytest.approx(
         endpoint_at_real_tx_osnr, rel=1e-6)
+
+
+def test_endpoint_key_varies_with_tx_osnr_db():
+    """endpoint_key's docstring claims it keys the exact set of inputs
+    endpoint_noise_lin reads -- which includes tx_osnr_db as a REAL
+    caller-supplied parameter (never SI_TX_OSNR_DB; see endpoint_noise_lin's
+    docstring for why that constant is not what a real propagation's SI
+    carries). Verify the parameter is actually wired into the returned tuple,
+    not silently ignored/hardcoded: two different tx_osnr_db values must
+    produce two different keys, and passing the SAME value back must be
+    reproducible."""
+    model, seq = _multi_oms_model()
+    key_35 = endpoint_key(model, seq, Direction.FORWARD, baud_rate=87.5e9,
+                          tx_osnr_db=35.0)
+    key_40 = endpoint_key(model, seq, Direction.FORWARD, baud_rate=87.5e9,
+                          tx_osnr_db=40.0)
+    key_35_again = endpoint_key(model, seq, Direction.FORWARD, baud_rate=87.5e9,
+                                tx_osnr_db=35.0)
+    assert key_35 != key_40
+    assert key_35 == key_35_again
+    assert 35.0 in key_35
+    assert 40.0 in key_40
