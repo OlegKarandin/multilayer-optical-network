@@ -3,7 +3,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Dict, Optional, Self, Tuple
 from .ip_assets import Router, IPLink, Service
 from .modes import ModeRegistry
-from .optical_network import FrozenModelError, OpticalNetworkModel
+from .optical_network import DEFAULT_DESIGN_MARGIN_DB, FrozenModelError, OpticalNetworkModel
 
 if TYPE_CHECKING:
     from .spectrum import SpectrumGrid
@@ -21,8 +21,9 @@ class NetworkModel(OpticalNetworkModel):
 
     def __init__(
         self, modes: ModeRegistry, grid: Optional["SpectrumGrid"] = None,
+        design_margin_db: float = DEFAULT_DESIGN_MARGIN_DB,
     ) -> None:
-        super().__init__(modes, grid)
+        super().__init__(modes, grid, design_margin_db=design_margin_db)
         self._routers: Dict[str, Router] = {}
         self._ip_links: Dict[str, IPLink] = {}
         self._services: Dict[str, Service] = {}

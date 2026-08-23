@@ -88,14 +88,16 @@ def _mode_infeasible_findings(model: NetworkModel) -> List[_Finding]:
             # downshift recovers the link (capacity falls, but it stays up);
             # empty => GSNR is below every mode's threshold, so reroute/repair,
             # not a downshift, is the only fix.
+            guard = model.design_margin_db
             downshift = [m.id for m in sorted(model.modes.list(),
                                               key=lambda m: -m.bitrate_gbps)
-                         if m.required_gsnr_db <= st.gsnr_db
+                         if m.required_gsnr_db + guard <= st.gsnr_db
                          and m.bitrate_gbps < cur.bitrate_gbps]
             out.append((ViolationType.MODE_INFEASIBLE, lp.id, {
                 "margin_db": st.margin_db,
                 "gsnr_db": st.gsnr_db,
                 "required_gsnr_db": cur.required_gsnr_db,
+                "design_margin_db": model.design_margin_db,
                 "deficit_db": cur.required_gsnr_db - st.gsnr_db,
                 "feasible_downshift_modes": downshift,
             }))

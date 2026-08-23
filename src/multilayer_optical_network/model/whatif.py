@@ -118,7 +118,7 @@ def max_feasible_mode_view(model: NetworkModel) -> List[MaxFeasibleModeRow]:
         except LookupError:
             continue
         feasible = [m for m in model.modes.list()
-                    if m.required_gsnr_db <= st.gsnr_db]
+                    if m.required_gsnr_db + model.design_margin_db <= st.gsnr_db]
         if not feasible:
             rows.append(MaxFeasibleModeRow(lp.id, lp.mode_id, None, "infeasible"))
             continue

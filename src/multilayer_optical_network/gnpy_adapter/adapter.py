@@ -232,7 +232,11 @@ def _cache_key(
     mode_id: str, loading: LoadingState, center_freq_hz: Optional[float],
 ) -> tuple:
     """Full content-addressed key: path physical params + loading + direction +
-    mode + probe frequency — every input that determines the returned GSNR."""
+    mode + probe frequency — every input that determines the returned GSNR.
+
+    Includes ``model.design_margin_db``: the cached value is a whole ``QoTState``
+    whose ``margin_db`` now depends on it, so omitting it would return a
+    confident wrong margin for a model with a different design margin."""
     return (
         tuple(oms_sequence),
         direction.value,
@@ -240,6 +244,7 @@ def _cache_key(
         center_freq_hz,
         loading.channels,                    # frozen Channels: freq/width/mode/baud
         _path_physical_fingerprint(model, oms_sequence, direction),
+        model.design_margin_db,
     )
 
 
@@ -545,7 +550,10 @@ def compute_qot(
         pr.si, probe_idx, pr.uids_list, pr.elements, pr.roadm_propagated,
         pr.baud_rate, pr.final_gsnr_db, pr.final_osnr_db)
 
-    margin_db = final_gsnr_db - mode.required_gsnr_db
+    # Usable margin: raw GSNR headroom LESS the model's design margin, so
+    # QoTState.mode_feasible (margin_db >= 0) is the single gate everything else
+    # reads -- including NetworkModel.ip_link_capacity_gbps's capacity-0 rule.
+    margin_db = final_gsnr_db - mode.required_gsnr_db - model.design_margin_db
 
     # ------------------------------------------------------------------ limiting element
     # The limiting element is the one with the most negative *finite* GSNR delta —
@@ -819,8 +827,13 @@ def harvest_cache_key(
     ``limiting_element_id=None``, so it carries no identity to leak. Two requests
     whose resolved element chains carry identical physics therefore MUST get the
     same numbers — and on an undamaged span that is exactly the forward and the
-    backward request for one lightpath, which halves the propagation count."""
-    return (mode_id, _path_physical_fingerprint(model, oms_sequence, direction))
+    backward request for one lightpath, which halves the propagation count.
+
+    Includes ``model.design_margin_db``: the cached value is a whole ``QoTState``
+    vector whose ``margin_db`` now depends on it, so omitting it would return a
+    confident wrong margin for a model with a different design margin."""
+    return (mode_id, _path_physical_fingerprint(model, oms_sequence, direction),
+            model.design_margin_db)
 
 
 def harvest_qot(
@@ -873,7 +886,7 @@ def harvest_qot(
         out[slot] = QoTState(
             gsnr_db=gsnr_db,
             osnr_db=osnr_db,
-            margin_db=gsnr_db - mode.required_gsnr_db,
+            margin_db=gsnr_db - mode.required_gsnr_db - model.design_margin_db,
             limiting_element_id=None,
         )
     return out

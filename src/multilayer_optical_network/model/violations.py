@@ -64,6 +64,11 @@ class ModeInfeasibleViolation(_ViolationBase):
     margin_db: SafeFloat
     gsnr_db: SafeFloat
     required_gsnr_db: SafeFloat
+    # Defaulted (not required) so pre-A1 hand-built Violation fixtures that omit
+    # this key (e.g. tests/model/test_views.py's cross-validation cases) keep
+    # validating; validate.py's real _mode_infeasible_findings always sets it
+    # explicitly from model.design_margin_db.
+    design_margin_db: SafeFloat = 0.0
     deficit_db: SafeFloat
     feasible_downshift_modes: list[str]
 

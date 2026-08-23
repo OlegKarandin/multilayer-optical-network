@@ -203,7 +203,9 @@ def _best_feasible_mode(
             mode_id=ref_mode_id, loading=loading).gsnr_db
         for d in (Direction.FORWARD, Direction.BACKWARD)
     )
-    feasible = [m for m in model.modes.list() if m.required_gsnr_db <= gsnr]
+    guard = model.design_margin_db
+    feasible = [m for m in model.modes.list()
+                if m.required_gsnr_db + guard <= gsnr]
     if not feasible:
         return None, gsnr
     return max(feasible, key=lambda m: m.bitrate_gbps), gsnr

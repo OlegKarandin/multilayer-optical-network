@@ -310,7 +310,7 @@ def _provision_and_seed_run(work, run, lp_id, ipl_id, site_to_router, grid):
         ip_link=IPLink(id=ipl_id, a_router=a, z_router=z, lightpath_id=lp_id)))
     req = work.modes.get(run.mode_id).required_gsnr_db
     state = QoTState(gsnr_db=run.gsnr_db, osnr_db=run.gsnr_db,
-                     margin_db=run.gsnr_db - req)
+                     margin_db=run.gsnr_db - req - work.design_margin_db)
     work.set_qot_state(lp_id, state)
     return a, z, lp_id, ipl_id, state
 
