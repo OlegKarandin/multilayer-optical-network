@@ -11,6 +11,7 @@ from multilayer_optical_network.model.multilayer_graph import (
     build_layered_graph, ACCESS, WLIN, WLOUT, lpe_edges, wle_count_on_layer, place_demands,
 )
 from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model import multilayer_graph as mg
 
 
 class _ConstQot:
@@ -598,3 +599,83 @@ def test_min_residual_defaults_to_todays_behaviour():
     n.add_service(Service("s-load", "R1", "R2", 70.0, working_path=("ip-AB",)))
     g = build_layered_graph(n)
     assert [d["lightpath_id"] for _, _, d in lpe_edges(g)] == ["lp-AB"]
+
+
+# ---------------------------------------------------------------------------
+# B2: accept-time slot assignment
+# ---------------------------------------------------------------------------
+
+def _shared_oms_two_run_model() -> NetworkModel:
+    """A-B-C-D line where a two-run placement (A->C then C->D) and a single-run
+    placement (A->D) both exist, and the two runs of a segmented A->B / B->D placement
+    share oms-BC. Built through the importer so both directed OMS exist per hop."""
+    graph = {
+        "nodes": [{"id": n} for n in ("A", "B", "C", "D")],
+        "edges": [
+            {"src": "A", "dst": "B", "length_km": 80.0},
+            {"src": "B", "dst": "C", "length_km": 80.0},
+            {"src": "C", "dst": "D", "length_km": 80.0},
+        ],
+    }
+    return model_from_abstract_graph(graph, modes=ModeRegistry([
+        TransceiverMode(id="100G", bitrate_gbps=100.0, required_gsnr_db=12.0,
+                        symbol_rate_baud=32e9, channel_spacing_hz=100e9)]))
+
+
+def test_sibling_runs_sharing_an_oms_get_distinct_slots():
+    """Two runs in ONE placement can legitimately share a physical OMS (the
+    WLin/WLout split lets a later run re-enter a span an earlier one used). They are
+    different lightpaths, so they must NOT be assigned the same slot on that span —
+    accept-time assignment threads a placement-local extra_state to force them apart."""
+    grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=80)
+    n = _shared_oms_two_run_model()
+    g = build_layered_graph(n, grid=grid)
+    res = place_demands(n, g, FakeQot(15.0), src="A", dst="D",
+                        demand_gbps=100.0, policy="new_only", grid=grid)
+    two_run = [p for p in res if len(p.new_lightpaths) == 2]
+    assert two_run, "expected a two-run placement sharing an OMS"
+    for p in two_run:
+        a, b = p.new_lightpaths
+        if set(a.oms_sequence) & set(b.oms_sequence):
+            assert a.lam != b.lam, (a.oms_sequence, b.oms_sequence, a.lam)
+
+
+def test_no_returned_placement_double_books_a_slot_on_one_oms():
+    """Whatever comes back must be internally conflict-free: no two runs of one
+    placement may hold the same slot on a shared OMS."""
+    grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=4)
+    n = _shared_oms_two_run_model()
+    g = build_layered_graph(n, grid=grid)
+    res = place_demands(n, g, FakeQot(15.0), src="A", dst="D",
+                        demand_gbps=100.0, policy="new_only", grid=grid)
+    assert res
+    for p in res:
+        booked = set()
+        for r in p.new_lightpaths:
+            for oms_id in r.oms_sequence:
+                assert (oms_id, r.lam) not in booked, (p, oms_id, r.lam)
+                booked.add((oms_id, r.lam))
+
+
+def test_placement_rejected_for_want_of_a_slot_does_not_consume_budget(monkeypatch):
+    """A route with no assignable slot is infeasible, not 'examined'. If it burned a
+    _PATH_BUDGET slot, a saturated corridor could starve the frontier of the
+    structurally distinct routes that ARE placeable.
+
+    Forced by shrinking the grid to ONE slot: any two-run placement sharing an OMS then
+    has no second slot and must be rejected -- while the single-run route still comes
+    back, proving the frontier was not starved. `_PATH_BUDGET` is patched down to 2 so
+    the starvation would be visible if rejections consumed it."""
+    monkeypatch.setattr(mg, "_PATH_BUDGET", 2)
+    grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=1)
+    n = _shared_oms_two_run_model()
+    g = build_layered_graph(n, grid=grid)
+    res = place_demands(n, g, FakeQot(15.0), src="A", dst="D",
+                        demand_gbps=100.0, policy="new_only", grid=grid)
+    assert any(len(p.new_lightpaths) == 1 for p in res), res
+    for p in res:
+        booked = set()
+        for r in p.new_lightpaths:
+            for oms_id in r.oms_sequence:
+                assert (oms_id, r.lam) not in booked
+                booked.add((oms_id, r.lam))

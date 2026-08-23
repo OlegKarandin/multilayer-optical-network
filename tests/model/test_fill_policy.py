@@ -162,11 +162,24 @@ def _shared_oms_mesh_model():
     oms_C_M is 800 km/10 spans (NLI-sensitive: ~0.03-0.08 dB per extra
     co-propagating channel, confirmed against the real adapter -- a single
     80 km span measured near-zero sensitivity, per the Task 5 finding this
-    investigation was warned about). J/K is a disconnected throwaway edge;
-    background lightpaths on it and on oms_C_M itself force >=2 wavelength
-    layers and a non-empty ACTUAL occupancy, both needed so the comparison
-    below isn't accidentally masked by compute_qot's auto-pad-to-2-channel
-    dummy (see the comment at the assertion site)."""
+    investigation was warned about). J/K is a disconnected throwaway edge.
+
+    S8-x (post dominance-maximal layers): the two same-direction traversals of
+    oms_C_M need to land on TWO DIFFERENT dominance-maximal classes -- same
+    class would mean the same (WLout,C,c)/(WLin,M,c) vertices for both, which a
+    simple-path search can't revisit. A signature that is merely a strict
+    SUBSET of the fully-free signature gets dominated and dropped (S7-14), so
+    partial occupancy no longer buys extra layers "for free" the way the old
+    per-slot cap did -- the grid must have NO fully-free slot at all, or the
+    all-OMS-free signature dominates everything down to one layer. Every slot
+    here carries either oms_J_K or oms_K_J (never both, never neither, and
+    never oms_C_M itself), producing exactly two pairwise-INCOMPARABLE
+    signatures (ALL-minus-J_K, ALL-minus-K_J), both of which still contain
+    oms_C_M free -- so the C->M hop is enumerable on either layer, and the two
+    runs land on different ones. lp-bg-CM (unchanged) separately gives a
+    non-empty ACTUAL occupancy on oms_C_M itself, needed so the GSNR
+    comparison below isn't accidentally masked by compute_qot's
+    auto-pad-to-2-channel dummy (see the comment at the assertion site)."""
     graph = {
         "nodes": [{"id": x} for x in ("C", "M", "D", "Z", "J", "K")],
         "edges": [
@@ -178,10 +191,13 @@ def _shared_oms_mesh_model():
         ],
     }
     n = model_from_abstract_graph(graph, modes=_s710_modes())
-    grid = SpectrumGrid.default()
-    for slot in range(3):
-        n.add_lightpath(Lightpath(f"lp-junk-{slot}", ("oms_J_K",), _S710_MODE, grid.freq(slot)))
-        n.set_qot_state(f"lp-junk-{slot}", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
+    grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=8)
+    for slot in range(0, 4):
+        n.add_lightpath(Lightpath(f"lp-junk-jk-{slot}", ("oms_J_K",), _S710_MODE, grid.freq(slot)))
+        n.set_qot_state(f"lp-junk-jk-{slot}", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
+    for slot in range(4, 8):
+        n.add_lightpath(Lightpath(f"lp-junk-kj-{slot}", ("oms_K_J",), _S710_MODE, grid.freq(slot)))
+        n.set_qot_state(f"lp-junk-kj-{slot}", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
     n.add_lightpath(Lightpath("lp-bg-CM", ("oms_C_M",), _S710_MODE, grid.freq(6)))
     n.set_qot_state("lp-bg-CM", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
     return n, grid
