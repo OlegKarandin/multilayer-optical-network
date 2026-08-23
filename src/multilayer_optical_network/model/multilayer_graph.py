@@ -316,7 +316,7 @@ def build_layered_graph(
             # add_lightpath rejects. key=oms.id keeps parallel OMS on the same ordered
             # (WLout,u,c)->(WLin,v,c) pair distinct (the S7-13 fix).
             g.add_edge((WLOUT, u, c), (WLIN, v, c), key=oms.id,
-                       kind="WLE", oms_id=oms.id, class_id=c, weight=_W_WLE)
+                       kind="WLE", oms_id=oms.id, lam=cls.slots[0], class_id=c, weight=_W_WLE)
             g.add_edge((ACCESS, u), (WLOUT, u, c), key="TxE",
                        kind="TxE", class_id=c, weight=_W_NEW_LP)
             g.add_edge((WLIN, v, c), (ACCESS, v), key="RxE",
@@ -457,7 +457,7 @@ def _parse_paths(
                 reused.append(d["lightpath_id"])
             elif kind == "WLE":
                 cur_oms.append(d["oms_id"])
-                cur_lam = d["class_id"]
+                cur_lam = d["lam"]
                 if cur_src is None:
                     cur_src = a[1]      # from-node of the first hop in this run
                 cur_dst = b[1]          # to-node, advanced each hop
