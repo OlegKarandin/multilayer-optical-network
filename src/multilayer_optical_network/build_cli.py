@@ -42,6 +42,9 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--unit-gbps", type=float, default=100.0)
     p.add_argument("--protected-fraction", type=float, default=0.3)
     p.add_argument("--max-iters", type=int, default=24)
+    p.add_argument("--design-margin-db", type=float, default=None,
+                   help="modelling-uncertainty margin held back from every "
+                        "mode-feasibility decision (default: the model default)")
     p.add_argument("--protection-basis", default=None,
                    choices=["physical", "srlg", "risk_group", "union"])
     p.add_argument("--protection-level", default=None,
@@ -106,6 +109,8 @@ def main() -> None:
     raw = json.loads(Path(args.topology).read_text(encoding="utf-8-sig"))
     fingerprint = topology_fingerprint(raw)
     model = load_model_from_topology_file(args.topology, modes=modes)
+    if args.design_margin_db is not None:
+        model.design_margin_db = args.design_margin_db
 
     store = QoTResultStore()
     # Both caches are content-addressed and shared across the WHOLE convergence
@@ -123,6 +128,7 @@ def main() -> None:
         "unit_gbps": args.unit_gbps, "protected_fraction": args.protected_fraction,
         "max_iters": args.max_iters,
         "protection_constraints": _protection_constraints(args),
+        "design_margin_db": args.design_margin_db,
     }
     res = build_operating_network(
         model, qot=qot, store=store, seed=args.seed,
