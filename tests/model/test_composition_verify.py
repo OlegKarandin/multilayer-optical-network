@@ -258,3 +258,55 @@ def test_verify_pass_costs_two_propagations_per_new_run_not_per_candidate():
     # pass: 2 propagations (forward + backward) per accepted new run, never
     # once during candidate scoring/search of the frontier above.
     assert qot.call_count == 2 * total_new_runs
+
+
+def test_ordering_fix_survives_a_later_demands_cross_lightpath_invalidation():
+    """The brief flagged _pack's verify-then-refresh ordering as subtle:
+    the per-iteration corrective re-seed loop blindly replays the WHOLE
+    accumulated all_seeded list, including entries from demands placed in
+    EARLIER iterations. Without refreshing an earlier demand's all_seeded
+    entry right after ITS OWN verify_and_reseed call, a LATER demand that
+    shares an OMS with it (and so invalidates its QoT via
+    NetworkModel._invalidate_qot_sharing_oms when its own new lightpath is
+    provisioned) would have that later iteration's corrective re-seed loop
+    replay the STALE COMPOSED value still sitting in all_seeded, silently
+    reverting demand 1's exact correction.
+
+    Two full-mode demands on the single-OMS fixture: demand 2 cannot groom
+    onto demand 1's (fully consumed) lightpath, so it must light its own new
+    lightpath -- on the SAME (only) OMS, guaranteeing demand 2's provisioning
+    invalidates demand 1's already-verified-and-corrected QoT. Asserting on
+    BOTH lightpaths' FINAL stored QoTState (after the whole _pack run,
+    including demand 2's own corrective re-seed and verify pass) proves the
+    refresh-after-verify step actually survives this end-to-end, not just in
+    isolation."""
+    model = _one_route_model()
+    qot = _CountingComposeQot(exact_gsnr=EXACT_GSNR, composed_gsnr=COMPOSED_GSNR)
+    demands = [
+        {"id": "d1", "src": "A", "dst": "Z", "demand_gbps": BITRATE_GBPS},
+        {"id": "d2", "src": "A", "dst": "Z", "demand_gbps": BITRATE_GBPS},
+    ]
+
+    result, work = solve_allocation_model(model, qot, demands, {"A": 2, "Z": 2})
+
+    assert result.status is SolverStatus.SOLUTION
+    assert len(result.placements) == 2
+    lp1_run = result.placements[0].new_lightpaths[0]
+    lp2_run = result.placements[1].new_lightpaths[0]
+    # Both new runs must land on the SAME (only) OMS for the cross-lightpath
+    # invalidation this test targets to actually fire -- assert it rather
+    # than assume it, so a future placement-engine change that stops sharing
+    # the OMS fails loudly here instead of silently making this test vacuous.
+    assert lp1_run.oms_sequence == lp2_run.oms_sequence == ("oms1",)
+    assert lp1_run.gsnr_estimated and lp2_run.gsnr_estimated
+
+    lightpaths = work.list_lightpaths()
+    assert len(lightpaths) == 2
+    for lp in lightpaths:
+        qs = work.get_qot_state(lp.id)
+        assert qs.gsnr_db == pytest.approx(EXACT_GSNR), (
+            f"{lp.id}'s final stored QoTState is not the exact value -- "
+            "a later demand's cross-lightpath invalidation + corrective "
+            "re-seed replayed a stale composed value over an earlier "
+            "demand's verify_and_reseed correction")
+        assert qs.gsnr_db != pytest.approx(COMPOSED_GSNR)
