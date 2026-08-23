@@ -60,9 +60,12 @@ def _model_with_one_lightpath(*, design_margin_db: float, mode_id: str,
     return n
 
 
-def test_default_is_zero_until_task_a7_flips_it():
-    assert DEFAULT_DESIGN_MARGIN_DB == 0.0
-    assert NetworkModel(modes=_MODES).design_margin_db == 0.0
+def test_default_is_zero_point_five_after_task_a7():
+    """Task A7 flipped DEFAULT_DESIGN_MARGIN_DB from 0.0 (behaviour-preserving,
+    Tasks A1-A6) to 0.5 (the reviewed, capacity-moving change) -- see
+    optical_network.py's rationale comment above the constant."""
+    assert DEFAULT_DESIGN_MARGIN_DB == 0.5
+    assert NetworkModel(modes=_MODES).design_margin_db == 0.5
 
 
 def test_clone_preserves_design_margin():

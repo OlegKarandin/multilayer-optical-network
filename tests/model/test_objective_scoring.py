@@ -393,11 +393,12 @@ def test_apply_candidate_disambiguates_on_id_collision(diamond_service):
 def test_score_candidate_preserves_bystander_margin_sharing_oms(diamond_service):
     """A bare pre-existing lightpath sharing omsAB with the candidate's new
     run must keep contributing its margin to total_margin. Candidate's own
-    margin: gsnr 15.0 - required 10.0 = 5.0. Bystander's seeded margin: 10.0.
-    Pre-fix, provisioning the candidate's new run on omsAB wipes the
-    bystander's QoT (shared OMS -> _invalidate_qot_sharing_oms),
-    evaluate_objective's total_margin loop silently skips it, and
-    total_margin reads only 5.0. Post-fix it reads 15.0."""
+    margin: gsnr 15.0 - required 10.0 - design margin 0.5 = 4.5. Bystander's
+    seeded margin: 10.0. Pre-fix, provisioning the candidate's new run on
+    omsAB wipes the bystander's QoT (shared OMS ->
+    _invalidate_qot_sharing_oms), evaluate_objective's total_margin loop
+    silently skips it, and total_margin reads only 4.5. Post-fix it reads
+    14.5."""
     model, svc = diamond_service   # empty net + svc-AB, omsAB A->B
     model.add_lightpath(Lightpath(id="lp-bystander", oms_sequence=("omsAB",),
                                   mode_id="100G", center_freq_hz=193.4e12))
@@ -411,9 +412,9 @@ def test_score_candidate_preserves_bystander_margin_sharing_oms(diamond_service)
 
     result = score_candidate(model, cand, svc)
 
-    assert result.total_margin == pytest.approx(15.0), (
+    assert result.total_margin == pytest.approx(14.5), (
         "bystander's margin (10.0) must be preserved alongside the "
-        "candidate's own (5.0), not silently wiped and skipped")
+        "candidate's own (4.5), not silently wiped and skipped")
 
 
 def test_score_candidate_preserves_bystander_congestion_evidence_sharing_oms(
@@ -462,11 +463,12 @@ def test_score_pair_preserves_bystander_margin_sharing_oms(diamond_service):
     """Same protection as score_candidate's bystander-margin test, but for
     score_pair: a pre-existing lightpath that is neither the working nor the
     protection leg being scored, sharing omsAB with BOTH legs' new runs, must
-    keep contributing its margin. Working margin: 5.0 (gsnr 15 - required
-    10). Protection margin: 5.0. Bystander margin: 10.0. Pre-fix, either
-    leg's provisioning wipes the bystander's QoT and evaluate_objective's
-    total_margin loop silently skips it -- total_margin would read 10.0
-    (both legs only). Post-fix it reads 20.0 (both legs + bystander)."""
+    keep contributing its margin. Working margin: 4.5 (gsnr 15 - required 10
+    - design margin 0.5). Protection margin: 4.5. Bystander margin: 10.0.
+    Pre-fix, either leg's provisioning wipes the bystander's QoT and
+    evaluate_objective's total_margin loop silently skips it -- total_margin
+    would read 9.0 (both legs only). Post-fix it reads 19.0 (both legs +
+    bystander)."""
     model, svc = diamond_service   # empty net + svc-AB, omsAB A->B
     model.add_lightpath(Lightpath(id="lp-bystander", oms_sequence=("omsAB",),
                                   mode_id="100G", center_freq_hz=193.4e12))
@@ -484,9 +486,9 @@ def test_score_pair_preserves_bystander_margin_sharing_oms(diamond_service):
 
     result = score_pair(model, working, protection, svc)
 
-    assert result.total_margin == pytest.approx(20.0), (
+    assert result.total_margin == pytest.approx(19.0), (
         "bystander's margin (10.0) must be preserved alongside both legs' "
-        "own (5.0 + 5.0), not silently wiped and skipped")
+        "own (4.5 + 4.5), not silently wiped and skipped")
 
 
 # --------------------------------------------------------------- Prefix assertion tests

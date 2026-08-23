@@ -30,7 +30,14 @@ if TYPE_CHECKING:
 # inherits it and a scenario can tune it. gnpy's own `sys_margins` (declared in
 # synthesize.py's SI block) is NOT this: gnpy consumes it only in request.py's path
 # computation, which this adapter bypasses by propagating elements directly.
-DEFAULT_DESIGN_MARGIN_DB = 0.0
+#
+# 0.5 dB: ~3x headroom over the MEASURED composition error bound (Task A4) at a 3.0%
+# aggregate-capacity cost, over 174 sampled decisions on german_17. 0.2 dB is
+# defensible if capacity ever becomes binding -- it still covers composition to 15 hops
+# at 1.4% -- but it must stay strictly above COMPOSITION_ERROR_BOUND_DB or Task A5's
+# safety theorem no longer holds (test_composed_selection_is_genuinely_feasible
+# asserts that relation directly).
+DEFAULT_DESIGN_MARGIN_DB = 0.5
 
 
 class FrozenModelError(RuntimeError):
