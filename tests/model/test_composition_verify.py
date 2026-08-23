@@ -29,7 +29,9 @@ from multilayer_optical_network.model.network import NetworkModel
 from multilayer_optical_network.model.qot import QoTState
 from multilayer_optical_network.model.solvers import SolverStatus
 from multilayer_optical_network.model.validate import ViolationType
-from multilayer_optical_network.model.violations import CompositionErrorViolation
+from multilayer_optical_network.model.violations import (
+    CompositionErrorViolation, ModeInfeasibleViolation,
+)
 
 REQUIRED_GSNR_DB = 5.0
 BITRATE_GBPS = 100.0
@@ -198,6 +200,72 @@ def test_watchdog_raises_a_typed_violation_when_the_bound_is_exceeded(monkeypatc
     instance = CompositionErrorViolation.model_validate(flat)
     assert instance.type == "composition_error"
     assert set(flat) == set(CompositionErrorViolation.model_fields)
+
+
+def test_watchdog_also_flags_a_bound_respecting_negative_margin_as_mode_infeasible():
+    """Final-review gap: composition is optimistic but BOUNDED (exact <=
+    composed, by at most COMPOSITION_ERROR_BOUND_DB), so a composed GSNR
+    sitting right at `_best_feasible_mode`'s selection boundary can still
+    re-seed a NEGATIVE exact margin even when the measured error never
+    exceeds the bound -- a gap the existing COMPOSITION_ERROR check (which
+    only fires when the error EXCEEDS the bound) does not catch on its own.
+    verify_and_reseed must surface this as a typed MODE_INFEASIBLE finding
+    instead of silently leaving the just-provisioned lightpath's now-
+    infeasible margin unreported."""
+    composed_gsnr = REQUIRED_GSNR_DB + 1.0    # == required + design_margin_db (1.0): the selection boundary
+    exact_gsnr = 5.85                          # error_db = 0.15, LESS than COMPOSITION_ERROR_BOUND_DB (0.23)
+    assert (composed_gsnr - exact_gsnr) < COMPOSITION_ERROR_BOUND_DB
+
+    model = _one_route_model()
+    qot = _CountingComposeQot(exact_gsnr=exact_gsnr, composed_gsnr=composed_gsnr)
+    demands = [{"id": "d1", "src": "A", "dst": "Z", "demand_gbps": BITRATE_GBPS}]
+
+    result, work = solve_allocation_model(model, qot, demands, {"A": 1, "Z": 1})
+
+    assert result.status is SolverStatus.SOLUTION
+    run = result.placements[0].new_lightpaths[0]
+    assert run.gsnr_estimated is True
+    assert run.gsnr_db == pytest.approx(composed_gsnr)
+
+    # (a) isolation: the existing bound-exceeded check must NOT fire here.
+    comp_errors = [v for v in result.violations if v.type is ViolationType.COMPOSITION_ERROR]
+    assert comp_errors == [], (
+        "the 0.15 dB error stays under COMPOSITION_ERROR_BOUND_DB -- the "
+        "existing watchdog check must not trip for this case")
+
+    # (b) the new gap-closing finding IS present.
+    mode_infeasibles = [v for v in result.violations if v.type is ViolationType.MODE_INFEASIBLE]
+    assert len(mode_infeasibles) == 1
+    v = mode_infeasibles[0]
+    assert v.transient is False
+    assert v.state_index == 0
+
+    lp = work.list_lightpaths()[0]
+    assert v.asset_id == lp.id
+
+    expected_margin = exact_gsnr - REQUIRED_GSNR_DB - work.design_margin_db
+    assert expected_margin == pytest.approx(-0.15)
+    assert v.detail["margin_db"] == pytest.approx(-0.15)
+    assert v.detail["gsnr_db"] == pytest.approx(exact_gsnr)
+    assert v.detail["required_gsnr_db"] == pytest.approx(REQUIRED_GSNR_DB)
+    assert v.detail["design_margin_db"] == pytest.approx(work.design_margin_db)
+    assert v.detail["deficit_db"] == pytest.approx(REQUIRED_GSNR_DB - exact_gsnr)
+    assert v.detail["feasible_downshift_modes"] == []   # this registry has only one mode
+
+    # (c) round-trips cleanly through views._violation_dict into the real
+    # ModeInfeasibleViolation Pydantic model -- same drift-guard pattern the
+    # bound-exceeded test above uses for CompositionErrorViolation.
+    flat = views_mod._violation_dict(v)
+    assert "detail" not in flat
+    instance = ModeInfeasibleViolation.model_validate(flat)
+    assert instance.type == "mode_infeasible"
+    assert set(flat) == set(ModeInfeasibleViolation.model_fields)
+
+    # (d) the capacity-0 consequence (existing, unchanged behaviour) really is
+    # in effect -- this test only adds the REPORT, not the mechanism.
+    qs = work.get_qot_state(lp.id)
+    assert qs.mode_feasible is False
+    assert qs.gsnr_db == pytest.approx(exact_gsnr)
 
 
 def test_estimated_flag_marks_composed_runs_in_tool_results():

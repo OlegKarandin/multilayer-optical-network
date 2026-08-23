@@ -90,9 +90,11 @@ _ENDPOINT_REF_BW_HZ = 12.5e9
 #       16   1440      0.2019      0.2298      0.2165
 #
 # measured max signed error over all hops: 0.2298 dB. `design_margin_db`
-# defaults to 0.0 today (Task A1; see model.optical_network.
-# DEFAULT_DESIGN_MARGIN_DB) -- this bound only becomes safe to compose against
-# once a caller sets design_margin_db > COMPOSITION_ERROR_BOUND_DB, per the
+# defaults to 0.5 today (Task A7; see model.optical_network.
+# DEFAULT_DESIGN_MARGIN_DB), already strictly above this bound -- but the
+# safety property this buys only actually applies once a CALLER wires
+# composition on (`build_cli.py` deliberately still does not pass
+# `increment_cache`, see tests/model/test_propagation_budget.py), per the
 # invariant Task A5's composed-selection gate asserts explicitly.
 COMPOSITION_ERROR_BOUND_DB = 0.23
 MAX_COMPOSED_HOPS = 16

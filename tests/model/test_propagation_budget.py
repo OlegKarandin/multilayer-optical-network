@@ -78,10 +78,11 @@ from tests.conftest import FIXTURES_DIR
 # does NOT pass `increment_cache` yet, because composition is only SAFE once
 # `design_margin_db > composition.COMPOSITION_ERROR_BOUND_DB` (see
 # `tests/model/test_composition_gate.py`'s
-# `test_composed_selection_is_genuinely_feasible`), and the model's default
-# margin is still 0.0 (Task A1; flips in a later task). This test's physics
-# are entirely stubbed (`_STUB_GSNR_DB`), so that safety gate is moot here --
-# it exercises the counting mechanism only.
+# `test_composed_selection_is_genuinely_feasible`), and Task A7 has already
+# flipped the model's default margin to 0.5 (satisfying that condition) --
+# `build_cli.py` just hasn't been wired to pass `increment_cache` yet. This
+# test's physics are entirely stubbed (`_STUB_GSNR_DB`), so that safety gate
+# is moot here -- it exercises the counting mechanism only.
 #
 # 19 -> 28 (Task A6, feat(qot): verify the committed placement exactly and
 # watchdog the composition bound): allocation._pack now calls

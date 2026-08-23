@@ -16,6 +16,7 @@ from multilayer_optical_network.model.assets import (
 from multilayer_optical_network.model.ip_assets import IPLink, Router
 from multilayer_optical_network.model.modes import ModeRegistry
 from multilayer_optical_network.model.network import NetworkModel
+from multilayer_optical_network.gnpy_adapter.composition import COMPOSITION_ERROR_BOUND_DB
 from multilayer_optical_network.model.optical_network import DEFAULT_DESIGN_MARGIN_DB
 from multilayer_optical_network.model.plan import Plan
 from multilayer_optical_network.model.qot import QoTState
@@ -63,9 +64,17 @@ def _model_with_one_lightpath(*, design_margin_db: float, mode_id: str,
 def test_default_is_zero_point_five_after_task_a7():
     """Task A7 flipped DEFAULT_DESIGN_MARGIN_DB from 0.0 (behaviour-preserving,
     Tasks A1-A6) to 0.5 (the reviewed, capacity-moving change) -- see
-    optical_network.py's rationale comment above the constant."""
+    optical_network.py's rationale comment above the constant.
+
+    Also asserts the safety-invariant guard that constant's own comment
+    promises: DEFAULT_DESIGN_MARGIN_DB must stay strictly above
+    COMPOSITION_ERROR_BOUND_DB, or Task A5's composed-selection safety theorem
+    (test_composition_gate.py's test_composed_selection_is_genuinely_feasible)
+    no longer holds -- unlike that test, which only checks a locally-set
+    model.design_margin_db = 0.5, this checks the actual SHIPPED default."""
     assert DEFAULT_DESIGN_MARGIN_DB == 0.5
     assert NetworkModel(modes=_MODES).design_margin_db == 0.5
+    assert DEFAULT_DESIGN_MARGIN_DB > COMPOSITION_ERROR_BOUND_DB
 
 
 def test_clone_preserves_design_margin():

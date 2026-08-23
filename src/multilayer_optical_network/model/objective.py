@@ -12,7 +12,7 @@ from .plan import apply_op, ProvisionLightpath, RerouteService
 from .assets import Direction, Lightpath
 from .ip_assets import IPLink
 from .qot import QoTState
-from .validate import Violation, ViolationType
+from .validate import Violation, ViolationType, _mode_infeasible_detail
 from ..gnpy_adapter.composition import COMPOSITION_ERROR_BOUND_DB
 from ..gnpy_adapter.loading import Channel, LoadingState
 
@@ -445,6 +445,15 @@ def verify_and_reseed(
     `ViolationType.COMPOSITION_ERROR` finding for any run whose
     `|composed - exact|` exceeds `COMPOSITION_ERROR_BOUND_DB`.
 
+    Independently of that bound check, also emit a typed
+    `ViolationType.MODE_INFEASIBLE` finding (final-review gap fix) whenever the
+    just-reseeded exact `QoTState.mode_feasible` comes back False -- composition
+    is optimistic but bounded (exact <= composed), so the exact margin can go
+    negative even while `|composed - exact|` stays fully inside the bound, which
+    the COMPOSITION_ERROR check alone never catches. Without this, a caller that
+    just received an accepted placement had no typed signal that the lightpath
+    backing it may already be down at capacity 0.
+
     A run with `gsnr_estimated=False` already carries an exact value from its
     OWN acceptance-time propagation (composition never got a chance to run --
     see `_best_feasible_mode`'s fall-through gates); re-propagating it would
@@ -535,6 +544,30 @@ def verify_and_reseed(
                     "error_db": error_db,
                     "bound_db": COMPOSITION_ERROR_BOUND_DB,
                 },
+            ))
+        # Final-review gap: composition is optimistic but bounded (exact <=
+        # composed, by up to COMPOSITION_ERROR_BOUND_DB), so the exact re-seed
+        # just above can land margin_db < 0 EVEN WHEN |error_db| stays fully
+        # inside the bound (the COMPOSITION_ERROR check above only fires when
+        # the error EXCEEDS the bound -- a different, narrower condition). A
+        # negative margin_db is model.mode_feasible's own correct signal that
+        # this lightpath's bound IP link is down at capacity 0 (CLAUDE.md's
+        # margin-feasibility gate) -- that consequence is correct, existing
+        # behaviour, not itself a bug. The bug is that it was silent: a caller
+        # that just received an accepted placement had no typed finding
+        # telling it the lightpath backing it may already be infeasible. Read
+        # back the state just set above and, independent of the
+        # COMPOSITION_ERROR check, emit the SAME ViolationType.MODE_INFEASIBLE
+        # validate_plan's own _mode_infeasible_findings produces for this exact
+        # condition elsewhere -- via the shared `_mode_infeasible_detail`
+        # helper, so the two call sites' margin_db/deficit_db/
+        # feasible_downshift_modes formulas cannot drift apart.
+        detail = _mode_infeasible_detail(model, model.get_lightpath(lp_id))
+        if detail is not None:
+            violations.append(Violation(
+                type=ViolationType.MODE_INFEASIBLE,
+                state_index=0, asset_id=lp_id, transient=False,
+                detail=detail,
             ))
     return tuple(violations)
 

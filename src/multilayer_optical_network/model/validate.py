@@ -80,32 +80,48 @@ _Finding = Tuple[ViolationType, Optional[str], dict]
 _RETUNE_CANDIDATE_LIMIT = 8          # cap free-slot lists so detail stays compact
 
 
+def _mode_infeasible_detail(model: NetworkModel, lp) -> Optional[dict]:
+    """The MODE_INFEASIBLE detail dict for one lightpath, or None if its
+    recorded QoT is feasible (or there is none recorded at all). Shared by
+    `_mode_infeasible_findings` below (validate_plan's per-state sweep over
+    every lightpath) and `objective.verify_and_reseed` (Task A6's post-commit
+    exact-reseed pass, which can itself re-seed a lightpath into this same
+    negative-margin state -- see model/objective.py) so the margin_db/
+    deficit_db/feasible_downshift_modes formulas can never drift between the
+    two call sites -- same shared-helper discipline as
+    gnpy_adapter/composition.py's oms_fingerprint/_oms_fingerprint_parts."""
+    try:
+        st = model.get_qot_state(lp.id)
+    except LookupError:
+        return None
+    if st.mode_feasible:
+        return None
+    cur = model.modes.get(lp.mode_id)
+    # Lower-rate modes the current GSNR WOULD satisfy. Non-empty => a
+    # downshift recovers the link (capacity falls, but it stays up);
+    # empty => GSNR is below every mode's threshold, so reroute/repair,
+    # not a downshift, is the only fix.
+    guard = model.design_margin_db
+    downshift = [m.id for m in sorted(model.modes.list(),
+                                      key=lambda m: -m.bitrate_gbps)
+                 if m.required_gsnr_db + guard <= st.gsnr_db
+                 and m.bitrate_gbps < cur.bitrate_gbps]
+    return {
+        "margin_db": st.margin_db,
+        "gsnr_db": st.gsnr_db,
+        "required_gsnr_db": cur.required_gsnr_db,
+        "design_margin_db": model.design_margin_db,
+        "deficit_db": cur.required_gsnr_db - st.gsnr_db,
+        "feasible_downshift_modes": downshift,
+    }
+
+
 def _mode_infeasible_findings(model: NetworkModel) -> List[_Finding]:
     out: List[_Finding] = []
     for lp in model.list_lightpaths():
-        try:
-            st = model.get_qot_state(lp.id)
-        except LookupError:
-            continue
-        if not st.mode_feasible:
-            cur = model.modes.get(lp.mode_id)
-            # Lower-rate modes the current GSNR WOULD satisfy. Non-empty => a
-            # downshift recovers the link (capacity falls, but it stays up);
-            # empty => GSNR is below every mode's threshold, so reroute/repair,
-            # not a downshift, is the only fix.
-            guard = model.design_margin_db
-            downshift = [m.id for m in sorted(model.modes.list(),
-                                              key=lambda m: -m.bitrate_gbps)
-                         if m.required_gsnr_db + guard <= st.gsnr_db
-                         and m.bitrate_gbps < cur.bitrate_gbps]
-            out.append((ViolationType.MODE_INFEASIBLE, lp.id, {
-                "margin_db": st.margin_db,
-                "gsnr_db": st.gsnr_db,
-                "required_gsnr_db": cur.required_gsnr_db,
-                "design_margin_db": model.design_margin_db,
-                "deficit_db": cur.required_gsnr_db - st.gsnr_db,
-                "feasible_downshift_modes": downshift,
-            }))
+        detail = _mode_infeasible_detail(model, lp)
+        if detail is not None:
+            out.append((ViolationType.MODE_INFEASIBLE, lp.id, detail))
     return out
 
 
