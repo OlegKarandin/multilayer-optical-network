@@ -18,7 +18,7 @@ from pathlib import Path
 
 from .model.allocation import make_adapter_evaluator
 from .model.modes import default_modes
-from .model.qot_results import HarvestCache, QoTCache, QoTResultStore
+from .model.qot_results import HarvestCache, IncrementCache, QoTCache, QoTResultStore
 from .model.scenario import build_operating_network
 from .model.solvers import SolverStatus
 from .state_file import dump_state, running_gnpy_version, topology_fingerprint
@@ -113,15 +113,35 @@ def main() -> None:
         model.design_margin_db = args.design_margin_db
 
     store = QoTResultStore()
-    # Both caches are content-addressed and shared across the WHOLE convergence
-    # loop: build_operating_network re-packs from the pristine model up to
-    # max_iters times, so the same (path, direction, mode) is probed again and
-    # again with identical physics. The harvest cache additionally collapses
-    # FillPolicy.FULL's per-probe-slot compute_qot calls into one propagation
-    # per path -- without it that branch (allocation.make_adapter_evaluator) is
-    # dead code and every candidate lambda re-propagates.
+    # All three caches are content-addressed and shared across the WHOLE
+    # convergence loop: build_operating_network re-packs from the pristine
+    # model up to max_iters times, so the same (path, direction, mode) is
+    # probed again and again with identical physics. The harvest cache
+    # additionally collapses FillPolicy.FULL's per-probe-slot compute_qot
+    # calls into one propagation per path -- without it that branch
+    # (allocation.make_adapter_evaluator) is dead code and every candidate
+    # lambda re-propagates.
+    #
+    # increment_cache turns composition ON for this, the one real production
+    # caller (tests/model/test_propagation_budget.py's own trail note --
+    # 69 -> 19 propagations on the frozen 22-demand german_17 fixture --
+    # measured this mechanism but deliberately left production dormant until
+    # the safety precondition held). That precondition is now satisfied:
+    # 05489b1/cec9668 default model.design_margin_db to 0.5 dB, comfortably
+    # above composition.COMPOSITION_ERROR_BOUND_DB (0.23 dB, the measured max
+    # signed composition error), so a composed selection can never be
+    # optimistic enough to accept a genuinely-infeasible mode. e868120's
+    # verify_and_reseed pass re-propagates every composed run exactly on
+    # accept regardless, surfacing any composed/exact disagreement past the
+    # bound as a typed Violation on AllocationResult.violations rather than
+    # trusting the composed number silently -- so this cache changes how many
+    # propagations the build performs, never what the packaged state ends up
+    # containing. One instance for the whole run, same lifetime as `store` and
+    # the other two caches: an OMS calibrated while placing an early demand is
+    # exactly what a later demand sharing that OMS should reuse.
     qot = make_adapter_evaluator(model, store, cache=QoTCache(),
-                                 harvest_cache=HarvestCache())
+                                 harvest_cache=HarvestCache(),
+                                 increment_cache=IncrementCache())
     params = {
         "seed": args.seed, "target_mean_util": args.target_mean_util,
         "max_util_cap": args.max_util_cap, "pair_density": args.pair_density,
