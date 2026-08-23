@@ -43,12 +43,58 @@ __all__ = [
     "endpoint_noise_lin",
     "endpoint_key",
     "compose_gsnr_db",
+    "COMPOSITION_ERROR_BOUND_DB",
+    "MAX_COMPOSED_HOPS",
 ]
 
 # gnpy's add_drop_osnr/tx_osnr reference bandwidth (Hz). Penalties declared at
 # this bandwidth are renormalised to the mode's symbol rate via gnpy's own
 # `snr_sum` factor, baud_rate / _ENDPOINT_REF_BW_HZ -- see `endpoint_noise_lin`.
 _ENDPOINT_REF_BW_HZ = 12.5e9
+
+# Composition is OPTIMISTIC: it under-predicts noise, because the same OMS
+# contributes ~1.3% more noise later in a path than early (NLI and ASE-signal
+# beating scale with the total power entering a span; upstream ASE accumulates).
+# Optimistic is the UNSAFE direction -- under CLAUDE.md's margin-feasibility gate
+# an over-selected mode does not degrade gracefully, it reports the IP link DOWN
+# at capacity 0.
+#
+# These two numbers are MEASURED, not extrapolated -- see the table in the commit
+# that introduced them and scripts/measure_composition_error.py. Re-measure
+# before raising MAX_COMPOSED_HOPS or trusting either on a new topology.
+#
+# Measured on german_17 (`scripts/measure_composition_error.py`, 17 nodes, 52
+# directed OMS; per-OMS increments harvested from an isolated 1-hop propagation
+# of each OMS, composed against real k-shortest routing candidates from every
+# ordered node pair, direction=FORWARD, mode=400G@7.1dB/87.5GBaud,
+# FillPolicy.FULL comb; 16 is the topology's true maximum simple-path length --
+# 17 nodes allow at most 16 hops, so this is exhaustive, not a sampling cutoff):
+#
+#     hops      n     min(dB)     max(dB)    mean(dB)
+#        1   1440     -0.0000      0.0000     -0.0000
+#        2   1440      0.0073      0.0218      0.0126
+#        3   1440      0.0203      0.0429      0.0294
+#        4   1440      0.0278      0.0648      0.0473
+#        5   1440      0.0459      0.0819      0.0637
+#        6   1440      0.0548      0.0925      0.0743
+#        7   1440      0.0655      0.1116      0.0924
+#        8   1440      0.0921      0.1280      0.1100
+#        9   1440      0.0977      0.1434      0.1230
+#       10   1440      0.1192      0.1598      0.1402
+#       11   1440      0.1364      0.1643      0.1491
+#       12   1440      0.1396      0.1825      0.1633
+#       13   1440      0.1567      0.2006      0.1776
+#       14   1440      0.1728      0.2128      0.1908
+#       15   1440      0.1830      0.2185      0.2002
+#       16   1440      0.2019      0.2298      0.2165
+#
+# measured max signed error over all hops: 0.2298 dB. `design_margin_db`
+# defaults to 0.0 today (Task A1; see model.optical_network.
+# DEFAULT_DESIGN_MARGIN_DB) -- this bound only becomes safe to compose against
+# once a caller sets design_margin_db > COMPOSITION_ERROR_BOUND_DB, per the
+# invariant Task A5's composed-selection gate asserts explicitly.
+COMPOSITION_ERROR_BOUND_DB = 0.23
+MAX_COMPOSED_HOPS = 16
 
 
 def oms_fingerprint(model: OpticalNetworkModel, oms_id: str) -> tuple:
