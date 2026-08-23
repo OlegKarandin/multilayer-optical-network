@@ -73,16 +73,17 @@ from tests.conftest import FIXTURES_DIR
 # -- composes its GSNR from the cached table instead of propagating again.
 # ~72.5% fewer propagations (69 -> 19, a ~3.6x reduction) on this frozen
 # 22-demand german_17 mesh, where many k-best candidate routes and disjoint
-# working/protection pairs share OMS segments. This is a STANDALONE proof that
-# the mechanism works, not yet production wiring: `build_cli.py` deliberately
-# does NOT pass `increment_cache` yet, because composition is only SAFE once
-# `design_margin_db > composition.COMPOSITION_ERROR_BOUND_DB` (see
-# `tests/model/test_composition_gate.py`'s
-# `test_composed_selection_is_genuinely_feasible`), and Task A7 has already
-# flipped the model's default margin to 0.5 (satisfying that condition) --
-# `build_cli.py` just hasn't been wired to pass `increment_cache` yet. This
-# test's physics are entirely stubbed (`_STUB_GSNR_DB`), so that safety gate
-# is moot here -- it exercises the counting mechanism only.
+# working/protection pairs share OMS segments. At the time this was measured
+# it was a STANDALONE proof that the mechanism works, not yet production
+# wiring: `build_cli.py` deliberately did not pass `increment_cache`, because
+# composition is only SAFE once `design_margin_db > composition.
+# COMPOSITION_ERROR_BOUND_DB` (see `tests/model/test_composition_gate.py`'s
+# `test_composed_selection_is_genuinely_feasible`). Task A7 flipped the
+# model's default margin to 0.5 (satisfying that condition), and Task A8 (see
+# `tests/test_build_cli.py`'s `test_cli_wires_an_increment_cache_into_the_
+# evaluator`) wired `build_cli.py` to pass `increment_cache` in production.
+# This test's physics are entirely stubbed (`_STUB_GSNR_DB`), so that safety
+# gate is moot here -- it exercises the counting mechanism only.
 #
 # 19 -> 28 (Task A6, feat(qot): verify the committed placement exactly and
 # watchdog the composition bound): allocation._pack now calls

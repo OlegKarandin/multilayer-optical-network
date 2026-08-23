@@ -363,3 +363,43 @@ def test_cli_wires_a_harvest_cache_into_the_evaluator(monkeypatch, tmp_path):
 
     assert isinstance(seen.get("harvest_cache"), HarvestCache), (
         f"CLI must pass a HarvestCache to make_adapter_evaluator; got {seen!r}")
+
+
+# --- Task A8: the CLI must wire an IncrementCache into the evaluator ---
+
+def test_cli_wires_an_increment_cache_into_the_evaluator(monkeypatch, tmp_path):
+    """Composition (`AdapterEvaluator.compose_gsnr`) is gated on `increment_cache
+    is not None` (allocation.make_adapter_evaluator's docstring). Without one,
+    `_best_feasible_mode` always falls through to exact propagation and the
+    ~3.6x propagation-count reduction tests/model/test_propagation_budget.py
+    measures (69 -> 19 on the frozen german_17 fixture) never reaches
+    production -- exactly the gap this test closes. Safe to wire
+    unconditionally here: model.design_margin_db defaults to 0.5 dB, above
+    composition.COMPOSITION_ERROR_BOUND_DB (0.23 dB), and every composed run
+    is re-verified exactly on accept (objective.verify_and_reseed) regardless
+    of the margin in effect."""
+    from multilayer_optical_network import build_cli
+    from multilayer_optical_network.model.qot_results import IncrementCache
+
+    seen = {}
+    real = build_cli.make_adapter_evaluator
+
+    def _spy(model, store, **kw):
+        seen.update(kw)
+        return real(model, store, **kw)
+
+    monkeypatch.setattr(build_cli, "make_adapter_evaluator", _spy)
+    monkeypatch.setattr(build_cli, "build_operating_network",
+                        lambda *a, **k: (_ for _ in ()).throw(SystemExit(0)))
+
+    out = tmp_path / "state.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        ["multilayer-optical-network-build",
+         "--topology", str(reference_topology("german_17")),
+         "--out", str(out)])
+    with pytest.raises(SystemExit):
+        build_cli.main()
+
+    assert isinstance(seen.get("increment_cache"), IncrementCache), (
+        f"CLI must pass an IncrementCache to make_adapter_evaluator; got {seen!r}")
