@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from multilayer_optical_network.data import reference_topology
+from multilayer_optical_network.data import reference_state, reference_topology
 from multilayer_optical_network.model import multilayer_graph as mg
 from multilayer_optical_network.model.modes import default_modes
 from multilayer_optical_network.model.multilayer_graph import (
@@ -19,6 +19,7 @@ from multilayer_optical_network.model.multilayer_graph import (
 from multilayer_optical_network.model.qot import QoTState
 from multilayer_optical_network.model.spectrum import SpectrumGrid
 from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.state_file import load_model_from_state_file
 
 
 class _FlatQot:
@@ -45,10 +46,16 @@ def _german17():
     return model_from_abstract_graph(graph, modes=default_modes())
 
 
+def _german17_packaged():
+    return load_model_from_state_file(
+        reference_topology("german_17"), reference_state("german_17"),
+        modes=default_modes())
+
+
 def _route_set(model, *, src, dst, policy, forbidden, grid):
     g = build_layered_graph(model, forbidden_assets=forbidden, grid=grid)
     res = place_demands(model, g, _FlatQot(), src=src, dst=dst,
-                        demand_gbps=100.0, policy=policy, k=20, grid=grid)
+                        demand_gbps=100.0, policy=policy, k=200, grid=grid)
     return {(p.reused_lightpaths,
              tuple(r.oms_sequence for r in p.new_lightpaths)) for p in res}
 
@@ -59,15 +66,19 @@ PAIRS = [("0", "5"), ("1", "9"), ("3", "12"), ("7", "16"), ("2", "11")]
 @pytest.mark.parametrize("src,dst", PAIRS)
 @pytest.mark.parametrize("policy", ["groom_or_new", "new_only"])
 @pytest.mark.parametrize("forbidden", [frozenset(), frozenset({"oms_0_3"})])
-def test_merged_route_set_equals_unmerged(monkeypatch, src, dst, policy, forbidden):
-    model = _german17()
+@pytest.mark.parametrize("model_factory", [_german17, _german17_packaged],
+                        ids=["pristine", "packaged"])
+def test_merged_route_set_equals_unmerged(monkeypatch, model_factory, src, dst,
+                                          policy, forbidden):
+    model = model_factory()
     grid = SpectrumGrid.default()
     merged = _route_set(model, src=src, dst=dst, policy=policy,
                         forbidden=forbidden, grid=grid)
     monkeypatch.setattr(mg, "maximal_slot_classes", _all_slot_classes)
     unmerged = _route_set(model, src=src, dst=dst, policy=policy,
                           forbidden=forbidden, grid=grid)
-    assert merged == unmerged, sorted(unmerged - merged)
+    assert unmerged, "reference enumeration returned no routes at all"
+    assert not (unmerged - merged), sorted(unmerged - merged)
 
 
 def test_merged_graph_is_much_smaller():
@@ -145,4 +156,5 @@ def test_saturated_state_keeps_several_maximal_layers_and_loses_no_route(monkeyp
     monkeypatch.setattr(mg, "maximal_slot_classes", _all_slot_classes)
     unmerged = _route_set(model, src=PAIRS[0][0], dst=PAIRS[0][1],
                           policy="new_only", forbidden=frozenset(), grid=grid)
-    assert merged == unmerged, sorted(unmerged - merged)
+    assert unmerged, "reference enumeration returned no routes at all"
+    assert not (unmerged - merged), sorted(unmerged - merged)
