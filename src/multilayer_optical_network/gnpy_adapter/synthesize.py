@@ -20,6 +20,16 @@ ROADM_ADD_DROP_OSNR = 33.0
 # Transponder launch power (dBm) — the TX-OSNR noise-floor reference. Distinct
 # from the design reference channel power (pch) and the ROADM target_pch_out.
 TX_LAUNCH_POWER_DBM = 0.0
+# Equipment SI block's tx_osnr (dB, at gnpy's 12.5 GHz reference bandwidth).
+# Feeds gnpy's OWN path_request_run computation path only -- NOT this adapter's
+# direct-element-propagation path, whose SI is built by translate.py's
+# build_si_for_loading, carrying its own independent tx_osnr default (35 dB;
+# _propagate_loading never overrides it). Named/exported (rather than left as
+# a bare literal) so `gnpy_adapter/composition.py` -- which needs the ACTUAL
+# per-carrier tx_osnr from a propagated SI's `si.tx_osnr`, not this value --
+# can still surface this one for any caller that specifically wants the
+# equipment-block figure (see composition.py's re-export docstring).
+SI_TX_OSNR_DB = 40
 
 # S3-8: single EDFA gain/power envelope shared by EVERY synthesized advanced_model
 # amplifier. Per-amp state (NF via nf_fit_coeff, tilt) varies; the envelope does
@@ -210,7 +220,7 @@ def model_to_gnpy_equipment(model: OpticalNetworkModel,
         "SI": [{"f_min": SI_BAND.f_min_hz, "baud_rate": 87.5e9,
                 "f_max": SI_BAND.f_max_hz,
                 "spacing": 100e9, "power_dbm": 0, "power_range_db": [0, 0, 1],
-                "roll_off": 0.15, "tx_osnr": 40, "sys_margins": 2}],
+                "roll_off": 0.15, "tx_osnr": SI_TX_OSNR_DB, "sys_margins": 2}],
         "Transceiver": [{"type_variety": "vendor-A",
                          "frequency": {"min": TRANSCEIVER_BAND.f_min_hz,
                                        "max": TRANSCEIVER_BAND.f_max_hz},

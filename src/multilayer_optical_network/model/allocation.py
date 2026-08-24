@@ -29,6 +29,7 @@ from .qot import QoTState
 from .solvers import (
     OmsPath, SolverStatus, compute_paths, compute_disjoint_paths,
 )
+from .validate import Violation
 from .spectrum import (
     SpectrumGrid, build_spectrum_state, first_fit_slot, occupied_along, reserve,
     FillPolicy,
@@ -39,6 +40,11 @@ from .placement_common import _lever, _status, _harvest_placements
 from . import objective as _objective
 from ..gnpy_adapter.loading import Channel, LoadingState
 from ..gnpy_adapter.adapter import compute_qot, harvest_qot, harvest_cache_key
+from ..gnpy_adapter.composition import (
+    DEFAULT_TX_OSNR_DB, MAX_COMPOSED_HOPS, compose_gsnr_db, endpoint_noise_lin,
+    oms_fingerprint,
+)
+from ..gnpy_adapter.translate import reverse_oms_sequence
 
 # Candidate routes considered per demand when searching for a feasible placement.
 _ROUTE_CAP = 8
@@ -54,7 +60,7 @@ class QotEvaluator(Protocol):
     ) -> QoTState: ...
 
 
-def make_adapter_evaluator(model, store, *, cache=None, harvest_cache=None) -> QotEvaluator:
+class AdapterEvaluator:
     """A QotEvaluator bound to the real GNPy adapter + a results store. An optional
     `cache` (QoTCache) memoizes propagation across calls — content-addressed, so it
     is safe to share one cache across a whole solve/settle run.
@@ -68,22 +74,54 @@ def make_adapter_evaluator(model, store, *, cache=None, harvest_cache=None) -> Q
     the oms_sequence nor the direction is in that key, so physically identical
     element chains (a symmetric span's two directions; two identical parallel
     paths) share one propagation. Any non-full (subset/ACTUAL) loading falls
-    through to today's per-call `compute_qot` path unchanged."""
-    grid = SpectrumGrid.default()
+    through to today's per-call `compute_qot` path unchanged.
 
-    def _eval(*, oms_sequence, direction, mode_id, loading):
-        if harvest_cache is not None:
+    An optional `increment_cache` (IncrementCache) additionally captures, on
+    every real harvest this evaluator performs, each traversed OMS's own
+    `1/gsnr_lin` contribution (`gnpy_adapter/composition.py`) — cheap piggyback
+    on a propagation that already has to walk every element. `compose_gsnr`
+    reads that table to answer a FUTURE (path, direction, mode, slot) question
+    without a fresh propagation, whenever every OMS on that path already has a
+    calibrated entry (see its own docstring for the full set of safety gates).
+    `None` (the default, matching `cache`/`harvest_cache`) disables composition
+    entirely — `compose_gsnr` then always returns `None` and `_best_feasible_mode`
+    falls through to today's exact-propagation behaviour unconditionally."""
+
+    def __init__(self, model, store, *, cache=None, harvest_cache=None,
+                 increment_cache=None) -> None:
+        self._model = model
+        self._store = store
+        self._cache = cache
+        self._harvest_cache = harvest_cache
+        self._increments = increment_cache
+        self._grid = SpectrumGrid.default()
+
+    def __call__(self, *, oms_sequence, direction, mode_id, loading):
+        if self._harvest_cache is not None:
             try:
-                slots = {grid.slot_of(c.center_freq_hz) for c in loading.channels}
+                slots = {self._grid.slot_of(c.center_freq_hz) for c in loading.channels}
             except ValueError:
                 slots = None                      # off-grid channel -> normal path
-            if slots is not None and len(slots) == grid.num_slots:
-                key = harvest_cache_key(model, tuple(oms_sequence), direction, mode_id)
-                vec = harvest_cache.get(key)
+            if slots is not None and len(slots) == self._grid.num_slots:
+                key = harvest_cache_key(self._model, tuple(oms_sequence), direction,
+                                        mode_id)
+                vec = self._harvest_cache.get(key)
                 if vec is None:
-                    vec = harvest_qot(model, tuple(oms_sequence), direction,
-                                      mode_id, loading)
-                    harvest_cache.put(key, vec)
+                    if self._increments is not None:
+                        # Piggyback the composition capture on this same
+                        # propagation -- every OMS this harvest walks gets its
+                        # own increment entry cached for FUTURE (possibly
+                        # entirely different) paths to compose from.
+                        vec, increments = harvest_qot(
+                            self._model, tuple(oms_sequence), direction, mode_id,
+                            loading, capture_increments=True)
+                        for oms_id, inc in increments.items():
+                            self._increments.put(
+                                oms_fingerprint(self._model, oms_id), inc)
+                    else:
+                        vec = harvest_qot(self._model, tuple(oms_sequence), direction,
+                                          mode_id, loading)
+                    self._harvest_cache.put(key, vec)
                 # probe = the channel compute_qot would pick when no center_freq_hz
                 # is given (first mode_id match = channels[0] under FULL, which
                 # prepends the probe) -- same selection rule as compute_qot's.
@@ -92,7 +130,7 @@ def make_adapter_evaluator(model, store, *, cache=None, harvest_cache=None) -> Q
                     raise ValueError(
                         f"loading does not include a channel for mode {mode_id!r}"
                     )
-                probe_slot = grid.slot_of(probe.center_freq_hz)
+                probe_slot = self._grid.slot_of(probe.center_freq_hz)
                 if probe_slot in vec:
                     return vec[probe_slot]
                 # The probe's own slot is one an amp/ROADM band-edge filter demuxed
@@ -103,12 +141,79 @@ def make_adapter_evaluator(model, store, *, cache=None, harvest_cache=None) -> Q
                 # band-edge limitation for such a probe, so this does not
                 # introduce new incorrect behavior.
         state, _ = compute_qot(
-            model=model, store=store, oms_sequence=tuple(oms_sequence),
+            model=self._model, store=self._store, oms_sequence=tuple(oms_sequence),
             direction=direction, mode_id=mode_id, loading=loading,
-            cache=cache,
+            cache=self._cache,
         )
         return state
-    return _eval
+
+    def compose_gsnr(self, oms_sequence, direction, mode_id, slot):
+        """Composed GSNR (dB) for one direction at grid *slot*, or `None` when
+        composition is unavailable or unsafe. Returning `None` is always
+        correct -- the caller (`_composed_worse_direction`) falls through to an
+        exact propagation, which is today's behaviour.
+
+        *oms_sequence* is always the FORWARD-defined sequence (mirrors
+        `compute_qot`'s own contract: one `oms_sequence` argument, `direction`
+        picks the leg). Under BACKWARD, the REVERSE OMS chain (S4-2/S4-3) is
+        walked to look up per-OMS increments -- `seq`, never the forward chain
+        read in reverse order, which would silently sum the WRONG (forward)
+        amp chain's noise for a backward query. `endpoint_noise_lin`, however,
+        is called with the ORIGINAL *oms_sequence* + *direction*, NOT `seq`:
+        `endpoint_noise_lin`'s own `_terminal_roadm_ids` helper does its OWN
+        BACKWARD resolution internally, so it needs the original, not the
+        pre-reversed, sequence as input. Passing `seq` instead would happen to
+        produce the SAME numeric endpoint term either way -- the terminal-ROADM
+        sum is order-independent over the unordered {add, drop} pair
+        (`composition.py`'s `for rid in (add_id, drop_id): penalties += ...`),
+        and `reverse_oms_sequence` is a true involution, so double-reversing
+        recovers the same unordered pair with the add/drop labels merely
+        swapped, which the sum doesn't distinguish -- so this is NOT a
+        numeric-correctness requirement. It is chosen because it (a) mirrors
+        `adapter._propagate_loading`'s own capture path exactly, which calls
+        `endpoint_noise_lin` with its own `oms_sequence` parameter, never its
+        locally-resolved `rev_seq`, and (b) avoids a second, redundant
+        `reverse_oms_sequence` call that would double the surface for hitting
+        that function's `ValueError` on a topology with ambiguous
+        parallel-route pairing on the reverse chain's own siblings."""
+        if self._increments is None:
+            return None
+        seq = oms_sequence
+        if direction is Direction.BACKWARD:
+            seq = reverse_oms_sequence(self._model, tuple(oms_sequence))
+            if seq is None:
+                return None          # unpaired reverse: let compute_qot raise
+        if len(seq) > MAX_COMPOSED_HOPS:
+            return None              # past where the error bound was MEASURED
+        parts = []
+        for oms_id in seq:
+            vec = self._increments.get(oms_fingerprint(self._model, oms_id))
+            if vec is None or slot not in vec:
+                return None          # uncalibrated OMS -- never guess
+            parts.append(vec[slot])
+        mode = self._model.modes.get(mode_id)
+        # Composition has no live SI to read tx_osnr off (that's the whole point
+        # of avoiding a propagation) -- DEFAULT_TX_OSNR_DB is the SAME 35 dB
+        # fallback `translate.build_si_for_loading` itself uses when nothing
+        # overrides it, matching what a real propagation of this path actually
+        # carries. NEVER `synthesize.SI_TX_OSNR_DB` (40, the equipment SI
+        # block's declared value): no real propagation in this adapter uses it
+        # -- see `gnpy_adapter/composition.py`'s `endpoint_noise_lin` docstring.
+        endp = endpoint_noise_lin(
+            self._model, oms_sequence, direction,
+            baud_rate=mode.symbol_rate_baud, tx_osnr_db=DEFAULT_TX_OSNR_DB)
+        return compose_gsnr_db(parts, endp, slot)
+
+
+def make_adapter_evaluator(model, store, *, cache=None, harvest_cache=None,
+                           increment_cache=None) -> QotEvaluator:
+    """Build the real `AdapterEvaluator` bound to *model*/*store* — see that
+    class's docstring for what `cache`/`harvest_cache`/`increment_cache` each
+    do. Kept as a function (rather than exposing the class directly) so a
+    caller's `make_adapter_evaluator(...)` call sites need no changes when the
+    evaluator's construction grows another optional cache in the future."""
+    return AdapterEvaluator(model, store, cache=cache, harvest_cache=harvest_cache,
+                            increment_cache=increment_cache)
 
 
 # ----------------------------------------------------------------- result types
@@ -161,6 +266,13 @@ class AllocationResult:
     status: SolverStatus
     placements: Tuple[AllocationPlacement, ...] = ()
     unplaced: Tuple[Tuple[str, str], ...] = ()     # (demand_id, reason)
+    # Task A6: objective.verify_and_reseed's post-accept exact-vs-composed
+    # watchdog findings, collected across every demand's accepted placement(s)
+    # in _pack. Typed (never silently dropped -- CLAUDE.md's "all tool
+    # results are structured" rule), almost always empty: it only carries an
+    # entry when a composed run's measured error exceeds
+    # composition.COMPOSITION_ERROR_BOUND_DB.
+    violations: Tuple[Violation, ...] = ()
 
 
 # ----------------------------------------------------------------- core placement
@@ -193,20 +305,86 @@ def _build_loading(
     return LoadingState((probe,) + neighbors)
 
 
+def _composed_worse_direction(
+    model: NetworkModel, qot: QotEvaluator, oms_sequence: Tuple[str, ...],
+    loading: Optional[LoadingState], ref_mode_id: str,
+) -> Optional[float]:
+    """Attempt `_best_feasible_mode`'s worse-direction GSNR question by
+    composition, or `None` when composition cannot answer it — never a partial
+    answer. Mirrors `AdapterEvaluator.__call__`'s own FULL-comb detection
+    (`len(slots) == grid.num_slots`) so a subset (ACTUAL-policy) loading never
+    reaches composition, and finds the probe slot the same way `compute_qot`'s
+    mode_id fallback does (the first channel matching *ref_mode_id*).
+
+    `qot` need not be an `AdapterEvaluator` — every test fake in the suite
+    lacks `compose_gsnr` entirely, and `getattr(..., None)` treats that exactly
+    like composition being unavailable."""
+    compose = getattr(qot, "compose_gsnr", None)
+    if compose is None or loading is None:
+        return None
+    grid = SpectrumGrid.default()
+    try:
+        slots = {grid.slot_of(c.center_freq_hz) for c in loading.channels}
+    except ValueError:
+        return None                           # off-grid channel -> not a full comb
+    if len(slots) != grid.num_slots:
+        return None                           # ACTUAL/subset loading: table is meaningless
+    probe = next((c for c in loading.channels if c.mode_id == ref_mode_id), None)
+    if probe is None:
+        return None
+    slot = grid.slot_of(probe.center_freq_hz)
+    values = []
+    for d in (Direction.FORWARD, Direction.BACKWARD):
+        v = compose(oms_sequence, d, ref_mode_id, slot)
+        if v is None:
+            return None                       # either direction unsafe -> no partial answer
+        values.append(v)
+    return min(values)
+
+
 def _best_feasible_mode(
     model: NetworkModel, qot: QotEvaluator, oms_sequence: Tuple[str, ...],
     loading: LoadingState, ref_mode_id: str,
 ):
-    """Worse-direction GSNR → highest-bitrate mode under threshold (or None)."""
-    gsnr = min(
+    """Worse-direction GSNR -> highest-bitrate mode under threshold (or None).
+
+    Prefers COMPOSITION (summing cached per-OMS 1/gsnr_lin increments) over
+    propagation when every gate below is satisfied, because propagation dominates
+    this workload: ~16 propagations per service at ~41 ms each, 75% of a cold
+    restoration loop (docs/2026-08-20-allocation-qot-performance-findings.md).
+    Composition is optimistic by a MEASURED bound, and `model.design_margin_db`
+    is what makes selecting from it safe -- see composition.COMPOSITION_ERROR_BOUND_DB.
+
+    Falls through to exact propagation whenever composition is not clearly safe:
+      * the loading is not a full comb (FillPolicy.ACTUAL -- increments are
+        loading-dependent and the table is meaningless),
+      * any OMS on the path has no calibrated increment for this slot,
+      * the path is longer than the range the error bound was measured over,
+      * a leg has no paired reverse OMS,
+      * `qot` has no `compose_gsnr` at all (every test fake).
+    Each of those returns today's exact answer, so the fall-through path is never
+    a behaviour change.
+
+    Returns `(mode_or_None, gsnr, composed: bool)` -- the 3rd element is True
+    iff `gsnr` came from `_composed_worse_direction` (never a partial mix of
+    composed-and-exact; that helper itself only returns non-None when BOTH
+    directions composed cleanly). Callers that mint a `NewLightpathRun`
+    (multilayer_graph.place_demands) thread this straight into
+    `NewLightpathRun.gsnr_estimated` (Task A6), which `objective.
+    verify_and_reseed` later reads to decide whether a run needs an exact
+    re-propagation before it is trusted for the stored/persisted margin."""
+    composed = _composed_worse_direction(model, qot, oms_sequence, loading, ref_mode_id)
+    gsnr = composed if composed is not None else min(
         qot(oms_sequence=oms_sequence, direction=d,
             mode_id=ref_mode_id, loading=loading).gsnr_db
         for d in (Direction.FORWARD, Direction.BACKWARD)
     )
-    feasible = [m for m in model.modes.list() if m.required_gsnr_db <= gsnr]
+    guard = model.design_margin_db
+    feasible = [m for m in model.modes.list()
+                if m.required_gsnr_db + guard <= gsnr]
     if not feasible:
-        return None, gsnr
-    return max(feasible, key=lambda m: m.bitrate_gbps), gsnr
+        return None, gsnr, composed is not None
+    return max(feasible, key=lambda m: m.bitrate_gbps), gsnr, composed is not None
 
 
 def _assign_on_route(
@@ -222,7 +400,11 @@ def _assign_on_route(
         return None
     loading = _build_loading(grid, state, route.oms_sequence, slot, ref_mode_id,
                              fill_policy)
-    mode, gsnr = _best_feasible_mode(model, qot, route.oms_sequence, loading, ref_mode_id)
+    # solve_rsa's flat SpectrumAssignment has no gsnr_estimated field (only
+    # NewLightpathRun, solve_allocation's shape, does -- see Task A6) --
+    # composed-vs-exact is discarded here, not threaded anywhere.
+    mode, gsnr, _composed = _best_feasible_mode(
+        model, qot, route.oms_sequence, loading, ref_mode_id)
     if mode is None:
         return None
     if require_gbps is not None and mode.bitrate_gbps < require_gbps:
@@ -463,6 +645,10 @@ def _pack(
 
     placements: List[AllocationPlacement] = []
     unplaced: List[Tuple[str, str]] = []
+    # Task A6: composition-error watchdog findings from verify_and_reseed,
+    # collected across every demand's accepted placement -- see AllocationResult
+    # .violations' docstring.
+    verify_violations: List[Violation] = []
     # Every (lp_id, QoTState) seeded across the WHOLE run (all demands, both
     # legs). Task 4's cross-lightpath QoT invalidation (any lightpath sharing
     # an OMS with a newly-provisioned one has its QoT wiped) can fire on a
@@ -588,6 +774,7 @@ def _pack(
                 work, pair.protection, svc, prefix="prot")
             apply_op(work, RerouteService(service_id=svc.id, ip_path=protection_ip_path,
                                           which="protection"))
+            new_entries_start = len(all_seeded)
             all_seeded.extend(seeded_working)
             all_seeded.extend(seeded_protection)
             # Per-iteration corrective re-seed (not just once at the end of the
@@ -597,6 +784,28 @@ def _pack(
             # correctly before the NEXT demand routes -- see all_seeded's comment.
             for lp_id, state in all_seeded:
                 work.set_qot_state(lp_id, state)
+            # Task A6: exact verify pass + composition-error watchdog on THIS
+            # demand's just-accepted working/protection runs -- deliberately
+            # placed AFTER the corrective re-seed loop above, not before: that
+            # loop blindly replays all_seeded's (still-COMPOSED) values, so a
+            # verify call made before it would have its exact correction
+            # immediately clobbered back to the composed one. Only runs whose
+            # NewLightpathRun.gsnr_estimated is True cost a propagation here
+            # (see verify_and_reseed's docstring); most placements are exact
+            # already and this is a no-op scan.
+            verify_violations.extend(
+                _objective.verify_and_reseed(work, qot, seeded_working, pair.working))
+            verify_violations.extend(
+                _objective.verify_and_reseed(work, qot, seeded_protection, pair.protection))
+            # Refresh THIS iteration's own all_seeded entries with whatever
+            # verify_and_reseed just wrote (exact-corrected where estimated,
+            # unchanged otherwise), so a LATER demand's corrective re-seed loop
+            # (which blindly replays all_seeded) propagates the EXACT value
+            # forward instead of reverting to the stale composed one it would
+            # otherwise still hold.
+            for i in range(new_entries_start, len(all_seeded)):
+                lp_id, _stale_state = all_seeded[i]
+                all_seeded[i] = (lp_id, work.get_qot_state(lp_id))
             _dec_inv(inv, need)
             placements.append(AllocationPlacement(
                 demand_id=did, lever=_lever(pair.working),
@@ -620,6 +829,7 @@ def _pack(
                 unplaced.append((did, "demand id collides with an existing service"))
                 continue
             seeded_pick = _objective.apply_candidate(work, pick, svc)    # provision+seed+reroute
+            new_entries_start = len(all_seeded)
             all_seeded.extend(seeded_pick)
             # Per-iteration corrective re-seed -- see the protected branch above
             # and all_seeded's comment: this demand's lightpath(s) must already
@@ -627,6 +837,14 @@ def _pack(
             # not just at the very end of the whole loop.
             for lp_id, state in all_seeded:
                 work.set_qot_state(lp_id, state)
+            # Task A6: exact verify pass + watchdog -- see the protected branch
+            # above for why this runs AFTER the corrective re-seed loop and why
+            # all_seeded's own entries are refreshed afterward.
+            verify_violations.extend(
+                _objective.verify_and_reseed(work, qot, seeded_pick, pick))
+            for i in range(new_entries_start, len(all_seeded)):
+                lp_id, _stale_state = all_seeded[i]
+                all_seeded[i] = (lp_id, work.get_qot_state(lp_id))
             _dec_inv(inv, need)
             placements.append(AllocationPlacement(
                 demand_id=did, lever=_lever(pick),
@@ -644,4 +862,5 @@ def _pack(
         work.set_qot_state(lp_id, state)
 
     status = _status(len(placements) > 0, len(unplaced) == 0)
-    return (AllocationResult(status, tuple(placements), tuple(unplaced)), work)
+    return (AllocationResult(status, tuple(placements), tuple(unplaced),
+                             tuple(verify_violations)), work)

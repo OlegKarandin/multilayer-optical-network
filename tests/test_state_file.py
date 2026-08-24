@@ -22,6 +22,29 @@ from multilayer_optical_network.state_file import (
 from multilayer_optical_network.testing import TOPOLOGY, _bare, _built
 
 
+def _round_trip_model(*, design_margin_db: float = 0.0):
+    """`_bare()`'s 3-node ring, with `design_margin_db` set the way Task A1
+    threads it through the model constructor -- reused by the design-margin
+    persistence tests below, which don't need lightpaths/services, only the
+    attribute and a topology `_write_pair` can fingerprint against."""
+    m = _bare()
+    m.design_margin_db = design_margin_db
+    return m
+
+
+def _write_pair(tmp_path: Path, model, *, meta: dict | None = None):
+    """Write a `(topology, state)` file pair for `model` against `TOPOLOGY`,
+    the way `topo_and_state` below builds one inline for `_built()` -- lifted
+    here so other tests can build a pair for a differently-configured model."""
+    topo = tmp_path / "topo.json"
+    topo.write_text(json.dumps(TOPOLOGY), encoding="utf-8")
+    state = tmp_path / "state.json"
+    doc = dump_state(model, fingerprint=topology_fingerprint(TOPOLOGY),
+                     meta=meta or {})
+    state.write_text(json.dumps(doc), encoding="utf-8")
+    return topo, state
+
+
 def test_fingerprint_is_stable_and_prefixed():
     fp = topology_fingerprint(TOPOLOGY)
     assert fp.startswith("sha256:")
@@ -184,12 +207,7 @@ from multilayer_optical_network.state_file import load_model_from_state_file
 
 @pytest.fixture
 def topo_and_state(tmp_path: Path):
-    topo = tmp_path / "topo.json"
-    topo.write_text(json.dumps(TOPOLOGY), encoding="utf-8")
-    state = tmp_path / "state.json"
-    doc = dump_state(_built(), fingerprint=topology_fingerprint(TOPOLOGY), meta={})
-    state.write_text(json.dumps(doc), encoding="utf-8")
-    return topo, state
+    return _write_pair(tmp_path, _built())
 
 
 def test_load_model_from_state_file_restores_the_services(topo_and_state):
@@ -255,3 +273,32 @@ def test_load_model_from_state_file_does_not_warn_without_a_stored_gnpy_version(
     modes = default_modes()
     load_model_from_state_file(topo, state, modes=modes)
     assert capsys.readouterr().err == ""
+
+
+def test_dump_state_records_the_design_margin(tmp_path):
+    """The per-lightpath margin_db stored in a state file is a USABLE margin measured
+    against whatever design margin the build ran at. Loading it into a model built with
+    a different margin would silently mix conventions, so the value travels in meta."""
+    m = _round_trip_model(design_margin_db=0.75)
+    doc = dump_state(m, fingerprint="sha256:deadbeef", meta={})
+    assert doc["meta"]["design_margin_db"] == 0.75
+
+
+def test_load_round_trips_the_design_margin(tmp_path):
+    m = _round_trip_model(design_margin_db=0.75)
+    topo, state = _write_pair(tmp_path, m)          # see below
+    loaded = load_model_from_state_file(topo, state, modes=default_modes())
+    assert loaded.design_margin_db == 0.75
+
+
+def test_state_file_without_design_margin_loads_as_zero(tmp_path):
+    """Backward compatibility: every file written before this change was built with no
+    design margin at all, so an ABSENT key means 0.0 -- not the current default, which
+    would retroactively reinterpret the margins already stored in those files."""
+    m = _round_trip_model(design_margin_db=0.75)
+    topo, state = _write_pair(tmp_path, m)
+    doc = json.loads(state.read_text(encoding="utf-8"))
+    doc["meta"].pop("design_margin_db")
+    state.write_text(json.dumps(doc), encoding="utf-8")
+    loaded = load_model_from_state_file(topo, state, modes=default_modes())
+    assert loaded.design_margin_db == 0.0

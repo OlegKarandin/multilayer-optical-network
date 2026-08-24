@@ -15,7 +15,7 @@ from multilayer_optical_network.model.violations import (
     ModeInfeasibleViolation, SpectrumClashViolation, IpLinkOverloadViolation,
     DroppedTrafficViolation, DisjointnessCollapseViolation,
     ProtectionNotViableViolation, ProtectionOversubscribedViolation,
-    InvalidPlanViolation,
+    CompositionErrorViolation, InvalidPlanViolation,
 )
 
 
@@ -188,8 +188,13 @@ def test_validation_report_dict_flattens_detail_for_every_violation_type():
     cases = [
         (Violation(ViolationType.MODE_INFEASIBLE, 0, "lpAB", False, {
             "margin_db": -1.0, "gsnr_db": 14.0, "required_gsnr_db": 15.0,
+            "design_margin_db": 0.5,
             "deficit_db": 1.0, "feasible_downshift_modes": ["50G-QPSK"],
         }), ModeInfeasibleViolation),
+        (Violation(ViolationType.COMPOSITION_ERROR, 0, "lp1", False, {
+            "composed_gsnr_db": 20.0, "exact_gsnr_db": 19.7,
+            "error_db": 0.3, "bound_db": 0.23,
+        }), CompositionErrorViolation),
         (Violation(ViolationType.SPECTRUM_CLASH, 0, "omsAB", False, {
             "slot": 3, "lightpaths": ["lp1", "lp2"],
             "retune_candidates": {"lp1": [4], "lp2": []},
@@ -237,7 +242,8 @@ def test_validation_report_dict_flattens_detail_for_every_violation_type():
 def test_validation_report_dict_sanitizes_nonfinite_floats_when_flattened():
     violation = Violation(ViolationType.MODE_INFEASIBLE, 0, "lpAB", False, {
         "margin_db": float("-inf"), "gsnr_db": float("-inf"),
-        "required_gsnr_db": 15.0, "deficit_db": float("inf"),
+        "required_gsnr_db": 15.0, "design_margin_db": 0.5,
+        "deficit_db": float("inf"),
         "feasible_downshift_modes": [],
     })
     report = ValidationReport(violations=(violation,), num_states=1)

@@ -15,6 +15,7 @@ def test_mode_infeasible_violation_construction():
     v = ModeInfeasibleViolation(
         state_index=0, asset_id="lpAB", transient=False,
         margin_db=-2.5, gsnr_db=13.0, required_gsnr_db=15.5,
+        design_margin_db=0.5,
         deficit_db=2.5, feasible_downshift_modes=["50G-QPSK"],
     )
     assert v.type == "mode_infeasible"
@@ -25,6 +26,7 @@ def test_mode_infeasible_violation_sanitizes_only_in_json_mode():
     v = ModeInfeasibleViolation(
         state_index=0, asset_id="lpAB", transient=False,
         margin_db=float("-inf"), gsnr_db=float("-inf"), required_gsnr_db=15.5,
+        design_margin_db=0.5,
         deficit_db=float("inf"), feasible_downshift_modes=[],
     )
     json_dump = v.model_dump(mode="json")
@@ -117,7 +119,7 @@ def test_validation_report_model_dispatches_discriminated_union():
     mode_infeasible_dict = {
         "type": "mode_infeasible", "state_index": 0, "asset_id": "lpAB",
         "transient": False, "margin_db": -1.0, "gsnr_db": 14.0,
-        "required_gsnr_db": 15.0, "deficit_db": 1.0,
+        "required_gsnr_db": 15.0, "design_margin_db": 0.5, "deficit_db": 1.0,
         "feasible_downshift_modes": [],
     }
     spectrum_clash_dict = {

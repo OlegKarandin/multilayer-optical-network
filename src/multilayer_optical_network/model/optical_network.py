@@ -23,6 +23,22 @@ from .qot import QoTState
 if TYPE_CHECKING:
     from .spectrum import SpectrumGrid
 
+# Modelling-uncertainty margin held back from every mode-feasibility decision, in dB.
+# NOT a transceiver property: editing modulation_formats.yaml's thresholds instead
+# would conflate the transceiver SPECIFICATION with design POLICY and make the
+# composition-safety argument undocumentable. Carried on the model so a clone/branch
+# inherits it and a scenario can tune it. gnpy's own `sys_margins` (declared in
+# synthesize.py's SI block) is NOT this: gnpy consumes it only in request.py's path
+# computation, which this adapter bypasses by propagating elements directly.
+#
+# 0.5 dB: ~3x headroom over the MEASURED composition error bound (Task A4) at a 3.0%
+# aggregate-capacity cost, over 174 sampled decisions on german_17. 0.2 dB is
+# defensible if capacity ever becomes binding -- it still covers composition to 15 hops
+# at 1.4% -- but it must stay strictly above COMPOSITION_ERROR_BOUND_DB or Task A5's
+# safety theorem no longer holds (test_composed_selection_is_genuinely_feasible
+# asserts that relation directly).
+DEFAULT_DESIGN_MARGIN_DB = 0.5
+
 
 class FrozenModelError(RuntimeError):
     """Raised when a mutating method is called on a frozen (snapshot) model.
@@ -49,9 +65,11 @@ class OpticalNetworkModel:
 
     def __init__(
         self, modes: ModeRegistry, grid: Optional["SpectrumGrid"] = None,
+        design_margin_db: float = DEFAULT_DESIGN_MARGIN_DB,
     ) -> None:
         self.modes = modes
         self._grid = grid
+        self.design_margin_db = design_margin_db
         self._frozen = False
         self._fiber_types: Dict[str, FiberType] = {}
         self._fibers: Dict[str, Fiber] = {}
@@ -93,7 +111,8 @@ class OpticalNetworkModel:
         every router, IP link, and service — and since SnapshotStore's
         create/branch/get/restore/put all route through ``clone()``, that would
         corrupt every snapshot in the system without an obvious symptom."""
-        c = type(self)(modes=self.modes, grid=self._grid)
+        c = type(self)(modes=self.modes, grid=self._grid,
+                       design_margin_db=self.design_margin_db)
         self._copy_state_into(c)
         c._frozen = False
         return c
