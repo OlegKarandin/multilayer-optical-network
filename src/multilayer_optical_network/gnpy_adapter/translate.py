@@ -104,12 +104,27 @@ def reverse_oms_sequence(
     return tuple(reverse)
 
 
+# The tx_osnr `build_si_for_loading` falls back to when a caller does not override
+# it -- and NEITHER real call site in adapter.py (`_propagate_loading`'s SI
+# construction, `_resolve_unpropagated_path`'s duplicate of it) ever does, so this
+# is the tx_osnr EVERY real propagation in this adapter actually carries. It is
+# deliberately NOT `synthesize.SI_TX_OSNR_DB` (40, the equipment SI block's
+# declared value) -- that constant is real for gnpy's own `path_request_run`
+# computation path, never for anything this adapter itself propagates (see
+# `gnpy_adapter/composition.py`'s `endpoint_noise_lin` docstring). Named as a
+# single constant so `build_si_for_loading`'s own default and any other consumer
+# of "the real tx_osnr" (`composition.AdapterEvaluator.compose_gsnr`, which has no
+# live SI to read `si.tx_osnr` off) can never drift apart into two independent
+# literals.
+DEFAULT_TX_OSNR_DB = 35.0
+
+
 def build_si_for_loading(
     loading: LoadingState,
     *,
     baud_rate: float,
     roll_off: float,
-    tx_osnr: float = 35.0,
+    tx_osnr: float = DEFAULT_TX_OSNR_DB,
     tx_power_dbm: float = -20.0,
     tx_launch_power_dbm: float = 0.0,
 ) -> Any:

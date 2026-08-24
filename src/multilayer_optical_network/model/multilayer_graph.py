@@ -56,18 +56,28 @@ Stage 7 assumptions (recorded explicitly, from the inspection roadmap):
   placement (`route_service.route_service`, `allocation`'s per-demand loop)
   now builds one `SpectrumGrid` and threads it through both calls, so the two
   `build_spectrum_state` calls can never desync on grid choice.
+- `SlotClass` and `maximal_slot_classes` replace the per-wavelength cap heuristic
+  (S7-14): layers are built only for ⊆-maximal free-slot signatures, not per slot,
+  so graph size is bounded as occupancy rises (O(m) classes in the worst case, where
+  m is at most `grid.num_slots`). The concrete wavelength choice is deferred to
+  accept time via `first_fit_slot`, so spectral packing is orthogonal to route
+  discovery — `place_demands` can choose the lowest free slot per placement without
+  driving a new routing pass.
 """
 from __future__ import annotations
 
 import itertools
+import logging
 from dataclasses import dataclass
 from typing import Callable, Dict, FrozenSet, Iterator, List, Optional, Tuple
 
 import networkx as nx
 
 from .network import NetworkModel
-from .spectrum import FillPolicy, SpectrumGrid, build_spectrum_state
+from .spectrum import FillPolicy, SpectrumGrid, build_spectrum_state, first_fit_slot, reserve
 from .exposure import oms_seq_asset_set
+
+_LOG = logging.getLogger(__name__)
 
 ACCESS = "access"
 # Node-split wavelength ports: a WLE lands on WLin and departs from WLout, joined
@@ -143,6 +153,66 @@ def _residual_gbps(model: NetworkModel, lp, load: Dict[str, float]) -> float:
     return residual
 
 
+@dataclass(frozen=True)
+class SlotClass:
+    """One wavelength LAYER of the auxiliary graph, standing for a set of
+    interchangeable grid slots.
+
+    `oms_ids` is the class's SIGNATURE: the non-forbidden OMS on which every slot in
+    `slots` is free. A layer's route set is determined entirely by its signature, and
+    all WLE carry the same weight (`_W_WLE`), so if signature(A) is a subset of
+    signature(B) then every route liftable onto A lifts onto B at identical cost and A
+    contributes nothing. Only ⊆-maximal signatures get a layer."""
+    class_id: int
+    slots: Tuple[int, ...]
+    oms_ids: FrozenSet[str]
+
+
+def maximal_slot_classes(
+    non_forbidden: List, spectrum: Dict[str, int], grid: SpectrumGrid,
+) -> Tuple[SlotClass, ...]:
+    """Group grid slots by free-set signature; keep only the ⊆-maximal ones.
+
+    Supersedes the old `cap` heuristic, which stopped at the first globally-free slot
+    and KEPT every slot below it ("a route may find them free on its own hops though
+    occupied elsewhere" — true, but irrelevant: if a route's hops are free on slot 2
+    they are also free on a slot that is free everywhere). The all-free signature is
+    the TOP of the subset lattice, so whenever any slot is free on every OMS exactly
+    one layer is built, no matter how full the network is — the old cap grew with
+    occupancy, i.e. search cost peaked exactly when a disaster was in progress.
+
+    Slots with an EMPTY signature (lit on every non-forbidden OMS) carry no route and
+    are discarded before maximality is tested. Signatures are computed over
+    NON-FORBIDDEN OMS only, so an avoid-set can change which ones are maximal.
+
+    Bit-twiddling note: `sig[lam]` is a bitmask over the *index* of `non_forbidden`,
+    which makes the O(m^2) maximality scan a pair of integer `&` comparisons rather
+    than set operations. m is at most `grid.num_slots` (48)."""
+    n_slots = grid.num_slots
+    sig = [0] * n_slots                       # sig[lam]: bitmask over OMS index
+    for i, oms in enumerate(non_forbidden):
+        free = (~spectrum.get(oms.id, 0)) & grid.all_slots_mask
+        bit = 1 << i
+        while free:
+            low = free & -free
+            sig[low.bit_length() - 1] |= bit
+            free ^= low
+    by_sig: Dict[int, List[int]] = {}
+    for lam in range(n_slots):
+        if sig[lam]:                          # empty signature -> no routes
+            by_sig.setdefault(sig[lam], []).append(lam)
+    keys = list(by_sig)
+    maximal = [s for s in keys if not any(t != s and s & t == s for t in keys)]
+    maximal.sort(key=lambda s: by_sig[s][0])  # deterministic: lowest slot first
+    return tuple(
+        SlotClass(class_id=cid, slots=tuple(by_sig[s]),
+                  oms_ids=frozenset(non_forbidden[i].id
+                                    for i in range(len(non_forbidden))
+                                    if (s >> i) & 1))
+        for cid, s in enumerate(maximal)
+    )
+
+
 def build_layered_graph(
     model: NetworkModel,
     forbidden_assets: FrozenSet[str] = frozenset(),
@@ -164,9 +234,9 @@ def build_layered_graph(
     allocation packer) should pass it.
 
     A MultiDiGraph (not a plain DiGraph) so parallel OMS between the same ordered
-    node pair stay distinct per wavelength: on a DiGraph the second WLE
-    ``(WLout,a,lam)->(WLin,b,lam)`` overwrites the first, silently collapsing
-    parallel fibers to one route per slot (S7-13). Mirrors the flat OMS solver's
+    node pair stay distinct per layer: on a DiGraph the second WLE
+    ``(WLout,a,c)->(WLin,b,c)`` overwrites the first, silently collapsing
+    parallel fibers to one route per class (S7-13). Mirrors the flat OMS solver's
     MultiDiGraph (S6-4). Parallel lightpaths on the same access hop stay distinct
     for the same reason."""
     from .ip_routing import offered_load_per_link
@@ -211,67 +281,56 @@ def build_layered_graph(
                    kind="LPE", lightpath_id=lp.id, residual_gbps=residual,
                    weight=_W_LPE)
 
-    # WLE + TxE/RxE per wavelength layer, capped at the FIRST GLOBALLY-free slot.
-    # A slot free on EVERY OMS is available to any route, so every slot above it is
-    # redundant for enumeration: no route ever needs a higher one. Building layers
-    # 0..k (k = first globally-free slot) instead of 0..num_slots collapses the
-    # wavelength-variant explosion that otherwise makes Yen's `shortest_simple_paths`
-    # regenerate one near-duplicate path per free slot (all deduped away by
-    # place_demands' lam-ignoring key). Slots below k are kept — a route may find
-    # them free on its own hops though occupied elsewhere. With NO globally-free
-    # slot (full saturation) this degrades to the old all-layers behavior.
+    # WLE + TxE/RxE per DOMINANCE-MAXIMAL wavelength layer. See maximal_slot_classes:
+    # a layer exists per ⊆-maximal free-slot signature, not per slot, so the graph
+    # stays ~one layer as the network fills instead of growing with occupancy. Layers
+    # are labelled by CLASS INDEX, not by a slot — the concrete wavelength is chosen
+    # by first_fit_slot at accept time in place_demands, which packs lower than
+    # whichever λ-variant Yen's happened to yield first (they all tie on weight).
     #
-    # ONE free layer suffices because of the node-split below: each optical node has
-    # a WLin and a WLout port per wavelength layer,
-    #   WLE      (WLout,u,lam) -> (WLin,v,lam)   traverse OMS u->v on slot lam
-    #   TxE      access(u)      -> (WLout,u,lam)  originate a new lightpath
-    #   RxE      (WLin,v,lam)   -> access(v)      terminate a new lightpath
-    #   EXPRESS  (WLin,n,lam)   -> (WLout,n,lam)  optical pass-through on one lam
+    # ONE layer suffices because of the node-split below: each optical node has a
+    # WLin and a WLout port per layer,
+    #   WLE      (WLout,u,c) -> (WLin,v,c)   traverse OMS u->v on this layer
+    #   TxE      access(u)    -> (WLout,u,c)  originate a new lightpath
+    #   RxE      (WLin,v,c)   -> access(v)    terminate a new lightpath
+    #   EXPRESS  (WLin,n,c)   -> (WLout,n,c)  optical pass-through on one layer
     # A through-lightpath bypasses node n via EXPRESS (one wavelength, continuity
-    # structural). A SEGMENTED placement terminates at (WLin,n,lam) and re-originates
-    # at (WLout,n,lam) — DISTINCT vertices — so its two runs may share one wavelength.
-    # The old single (WL,n,lam) vertex forbade that (a simple path can't revisit it),
-    # which spuriously forced segmented runs onto different slots and needed a 2nd
-    # free layer just to enumerate them.
+    # structural). A SEGMENTED placement terminates at (WLin,n,c) and re-originates at
+    # (WLout,n,c) — DISTINCT vertices — so its two runs may share one wavelength. The
+    # old single (WL,n,lam) vertex forbade that (a simple path can't revisit it).
     non_forbidden = [oms for oms in model.list_oms() if not _oms_forbidden(oms)]
-    union_occ = 0
-    for oms in non_forbidden:
-        union_occ |= spectrum.get(oms.id, 0)
-    cap = grid.num_slots
-    for lam in range(grid.num_slots):
-        if not ((union_occ >> lam) & 1):        # first slot free on every OMS
-            cap = lam + 1
-            break
-    wl_in: set = set()      # (node, lam) reached by an incoming WLE
-    wl_out: set = set()     # (node, lam) left by an outgoing WLE
-    for oms in non_forbidden:
-        occ = spectrum.get(oms.id, 0)
-        u, v = oms.src_node_id, oms.dst_node_id
-        for lam in range(cap):
-            if (occ >> lam) & 1:
-                continue   # slot lit -> no WLE
+    classes = maximal_slot_classes(non_forbidden, spectrum, grid)
+    g.graph["slot_classes"] = classes
+    wl_in: set = set()      # (node, class_id) reached by an incoming WLE
+    wl_out: set = set()     # (node, class_id) left by an outgoing WLE
+    for cls in classes:
+        for oms in non_forbidden:
+            if oms.id not in cls.oms_ids:
+                continue    # slot lit on this OMS for every slot in the class
+            u, v = oms.src_node_id, oms.dst_node_id
+            c = cls.class_id
             # An OMS carries traffic src->dst ONLY (mirrors build_oms_graph's
             # directionality invariant): add the WLE in the OMS's own direction and
-            # NOT the reverse. The reverse hop is served by the reverse OMS, which
-            # a physical topology always provides (topology_import adds both). Adding
+            # NOT the reverse. The reverse hop is served by the reverse OMS, which a
+            # physical topology always provides (topology_import adds both). Adding
             # (v,u) here made a return-direction OMS traversable against its flow, so
             # _parse_paths could stitch a new lightpath from wrong-direction OMS
             # (e.g. oms_1_0 for a 0->1 hop) -> a non-contiguous oms_sequence that
-            # add_lightpath rejects. key=oms.id keeps parallel OMS on the same
-            # ordered (WLout,u,lam)->(WLin,v,lam) pair distinct (the S7-13 fix).
-            g.add_edge((WLOUT, u, lam), (WLIN, v, lam), key=oms.id,
-                       kind="WLE", oms_id=oms.id, lam=lam, weight=_W_WLE)
-            g.add_edge((ACCESS, u), (WLOUT, u, lam), key="TxE",
-                       kind="TxE", lam=lam, weight=_W_NEW_LP)
-            g.add_edge((WLIN, v, lam), (ACCESS, v), key="RxE",
-                       kind="RxE", lam=lam, weight=_W_RXE)
-            wl_out.add((u, lam))
-            wl_in.add((v, lam))
-    # EXPRESS: optical pass-through where a node both receives and forwards on a lam
+            # add_lightpath rejects. key=oms.id keeps parallel OMS on the same ordered
+            # (WLout,u,c)->(WLin,v,c) pair distinct (the S7-13 fix).
+            g.add_edge((WLOUT, u, c), (WLIN, v, c), key=oms.id,
+                       kind="WLE", oms_id=oms.id, class_id=c, weight=_W_WLE)
+            g.add_edge((ACCESS, u), (WLOUT, u, c), key="TxE",
+                       kind="TxE", class_id=c, weight=_W_NEW_LP)
+            g.add_edge((WLIN, v, c), (ACCESS, v), key="RxE",
+                       kind="RxE", class_id=c, weight=_W_RXE)
+            wl_out.add((u, c))
+            wl_in.add((v, c))
+    # EXPRESS: optical pass-through where a node both receives and forwards on a layer
     # (so a through-lightpath continues on one wavelength without dropping to access).
-    for n, lam in wl_in & wl_out:
-        g.add_edge((WLIN, n, lam), (WLOUT, n, lam), key="EXPRESS",
-                   kind="EXPRESS", lam=lam, weight=_W_EXPRESS)
+    for n, c in wl_in & wl_out:
+        g.add_edge((WLIN, n, c), (WLOUT, n, c), key="EXPRESS",
+                   kind="EXPRESS", class_id=c, weight=_W_EXPRESS)
     return g
 
 
@@ -280,13 +339,15 @@ def lpe_edges(g: nx.MultiDiGraph) -> List[Tuple]:
     return [(u, v, d) for u, v, d in g.edges(data=True) if d.get("kind") == "LPE"]
 
 
-def wle_count_on_layer(g: nx.MultiDiGraph, oms_id: str, lam: int) -> int:
-    """Number of WLE edges for an OMS on a given wavelength layer (0 when the slot
-    is lit/forbidden, else 1: an OMS carries traffic in its own direction only, so
-    it contributes a single WLE per free slot — the reverse hop belongs to the
-    reverse OMS)."""
+def wle_count_on_layer(g: nx.MultiDiGraph, oms_id: str, class_id: int) -> int:
+    """Number of WLE edges for an OMS on a given wavelength LAYER (a dominance-maximal
+    slot class, indexed from 0 — not a grid slot). 0 when the OMS is lit on that
+    class's slots or forbidden, else 1: an OMS carries traffic in its own direction
+    only, so it contributes a single WLE per layer — the reverse hop belongs to the
+    reverse OMS."""
     return sum(1 for _, _, d in g.edges(data=True)
-               if d.get("kind") == "WLE" and d.get("oms_id") == oms_id and d.get("lam") == lam)
+               if d.get("kind") == "WLE" and d.get("oms_id") == oms_id
+               and d.get("class_id") == class_id)
 
 
 # ---------------------------------------------------------------------------
@@ -306,6 +367,14 @@ class NewLightpathRun:
     # does not derive a reversed lightpath from oms_sequence.
     src_node: str = ""
     dst_node: str = ""
+    # True iff `gsnr_db` came from allocation._best_feasible_mode COMPOSING
+    # cached per-OMS increments (gnpy_adapter/composition.py) rather than a
+    # real propagation -- optimistic by up to COMPOSITION_ERROR_BOUND_DB until
+    # objective.verify_and_reseed re-propagates it exactly (Task A6). Placed
+    # after src_node/dst_node (which already default) rather than keyword-
+    # only, so every existing positional NewLightpathRun(...) call site in
+    # this codebase and its tests keeps compiling unchanged.
+    gsnr_estimated: bool = False
 
 
 @dataclass(frozen=True)
@@ -321,15 +390,16 @@ class Placement:
 _PATH_BUDGET = 64
 _DEFAULT_K = 8
 
-# Generous safety cap on RAW node paths drawn from shortest_simple_paths. The
-# _PATH_BUDGET / _DEFAULT_K guards count DISTINCT routes / accepted placements, so
-# on a topology with few distinct routes but a wide grid neither fires and the
-# generator drains to exhaustion — thousands of lambda-mixing simple paths (new
-# lightpaths regenerated across slots at an access node), Yen's algorithm churning
-# on each. This bounds that work while staying far above the lambda-variant count
-# that would otherwise starve a strictly-more-expensive distinct route (the S7-6
-# guard): a full C-band's worth of slots is < 128, so 1024 clears ~8 cheaper
-# distinct routes' variants before cutting off.
+# Generous safety cap on RAW node paths drawn from shortest_simple_paths. Originally
+# guarded against the per-slot λ-variant drain (thousands of lambda-mixing simple
+# paths regenerated across slots at an access node, Yen's algorithm churning on each)
+# -- SlotClass/maximal_slot_classes (S7-14) removed that drain in the common case (one
+# maximal layer), so this now survives as a backstop for the SATURATED regime (several
+# incomparable maximal layers live at once, S8-x's dedup_hits signal), not the everyday
+# path. The _PATH_BUDGET / _DEFAULT_K guards count DISTINCT routes / accepted
+# placements, so on a topology with few distinct routes but many live layers neither
+# fires and the generator can still drain to exhaustion; this bounds that work and now
+# LOGS when it fires rather than truncating silently (spec §6).
 _RAW_PATH_CAP = 1024
 
 
@@ -371,26 +441,27 @@ def _parse_paths(
     g: nx.MultiDiGraph, path: List,
 ) -> Iterator[Tuple[List[str], List[Tuple[Tuple[str, ...], int, str, str]]]]:
     """Expand an access->access *vertex* path into every concrete
-    (reused_lightpath_ids, new_runs) it realises, choosing among parallel edges
-    per hop. On a MultiDiGraph a single node path may correspond to several routes
-    when parallel OMS (or parallel lightpaths) share an ordered vertex pair
-    (S7-13) — `nx.shortest_simple_paths` yields node paths only, so the per-hop
-    choice is re-expanded here (mirrors the flat solver's `itertools.product`).
+    (reused_lightpath_ids, new_runs) it realises, choosing among parallel edges per
+    hop. On a MultiDiGraph a single node path may correspond to several routes when
+    parallel OMS (or parallel lightpaths) share an ordered vertex pair (S7-13) —
+    `nx.shortest_simple_paths` yields node paths only, so the per-hop choice is
+    re-expanded here (mirrors the flat solver's `itertools.product`).
 
-    Each new_run is (oms_sequence, lam, src_node, dst_node); the travel endpoints
-    come from the WL-vertex node components ((WLout/WLin, node, lam)), so a return-
-    direction run over a physically-forward OMS records its true direction rather
-    than the OMS's physical orientation. EXPRESS hops (optical pass-through at a
-    node on one wavelength) continue the current run without touching access."""
+    Each new_run is (oms_sequence, class_id, src_node, dst_node). `class_id` names the
+    dominance-maximal LAYER the run was enumerated on, NOT a grid slot: layers now
+    stand for a set of interchangeable slots, and the concrete wavelength is chosen by
+    `_assign_slots` at accept time. The travel endpoints come from the WL-vertex node
+    components ((WLout/WLin, node, class_id)), so a return-direction run over a
+    physically-forward OMS records its true direction rather than the OMS's physical
+    orientation. EXPRESS hops (optical pass-through at a node on one layer) continue
+    the current run without touching access."""
     hops = list(zip(path, path[1:]))
-    # per hop: the list of parallel edge-data dicts (MultiDiGraph get_edge_data
-    # returns {key: data}); a plain node path collapses these into one choice.
     per_hop = [list(g.get_edge_data(a, b).values()) for a, b in hops]
     for combo in itertools.product(*per_hop):
         reused: List[str] = []
         new_runs: List[Tuple[Tuple[str, ...], int, str, str]] = []
         cur_oms: List[str] = []
-        cur_lam: Optional[int] = None
+        cur_cls: Optional[int] = None
         cur_src: Optional[str] = None
         cur_dst: Optional[str] = None
         for (a, b), d in zip(hops, combo):
@@ -399,16 +470,16 @@ def _parse_paths(
                 reused.append(d["lightpath_id"])
             elif kind == "WLE":
                 cur_oms.append(d["oms_id"])
-                cur_lam = d["lam"]
+                cur_cls = d["class_id"]
                 if cur_src is None:
                     cur_src = a[1]      # from-node of the first hop in this run
                 cur_dst = b[1]          # to-node, advanced each hop
             elif kind == "RxE":
                 if cur_oms:
-                    new_runs.append((tuple(cur_oms), cur_lam, cur_src, cur_dst))
-                    cur_oms, cur_lam, cur_src, cur_dst = [], None, None, None
-            # TxE: entry into a wl layer; nothing to record.
-            # EXPRESS: optical pass-through (WLin,n,lam)->(WLout,n,lam) — the run
+                    new_runs.append((tuple(cur_oms), cur_cls, cur_src, cur_dst))
+                    cur_oms, cur_cls, cur_src, cur_dst = [], None, None, None
+            # TxE: entry into a layer; nothing to record.
+            # EXPRESS: optical pass-through (WLin,n,c)->(WLout,n,c) — the run
             # continues on the same wavelength; nothing to record (the next WLE
             # extends cur_oms/cur_dst).
         yield reused, new_runs
@@ -421,6 +492,39 @@ def _bottleneck_residual(g: nx.MultiDiGraph, reused: List[str]) -> float:
     by_lp = {d["lightpath_id"]: d["residual_gbps"]
              for _, _, d in g.edges(data=True) if d.get("kind") == "LPE"}
     return min(by_lp[lp] for lp in reused)
+
+
+def _assign_slots(
+    new_runs: List[Tuple[Tuple[str, ...], int, str, str]],
+    spectrum: Dict[str, int], grid: SpectrumGrid,
+) -> Optional[List[int]]:
+    """One concrete grid slot per new run, or None if any run cannot get one.
+
+    Enumeration only proves a route exists on SOME layer; the wavelength is chosen
+    here, by first-fit over the run's own OMS sequence. Deliberately NOT restricted to
+    the enumerating class's slot pool: a route is enumerable on class C only if every
+    OMS of the route is in signature(C), so the lowest slot free along the route is a
+    valid wavelength-continuous assignment whether or not it belongs to C — and it
+    packs lower. (Under the old cap heuristic every λ-variant tied on weight, so Yen's
+    yielded them in arbitrary order and the dedup kept whichever came first; the
+    concrete λ was effectively arbitrary. This is deterministic low-slot packing.)
+
+    `taken` is a placement-local `extra_state` in `first_fit_slot`'s existing sense:
+    two runs of ONE placement can share a physical OMS (the WLin/WLout split lets a
+    later run re-enter a span an earlier one used), and they are different lightpaths,
+    so they must not land on the same slot there. Returning None rejects the placement
+    and lets enumeration continue — a first-run failure is impossible (the class's own
+    slots are free along the route by construction), so this only fires on sibling
+    contention."""
+    taken: Dict[str, int] = {}
+    out: List[int] = []
+    for oms_seq, _class_id, _src, _dst in new_runs:
+        slot = first_fit_slot(spectrum, oms_seq, grid, extra_state=taken)
+        if slot is None:
+            return None
+        reserve(taken, oms_seq, slot)
+        out.append(slot)
+    return out
 
 
 def place_demands(
@@ -470,6 +574,7 @@ def place_demands(
     seen: set = set()
     examined = 0     # DISTINCT routes examined (budget counter, not raw emissions)
     raw_paths = 0    # RAW node paths drawn (safety valve against generator drain)
+    dedup_hits = 0   # layer-variant dedup hits (saturation signal, S8-x)
     budget_hit = False
     for path in nx.shortest_simple_paths(simple, s, t, weight="weight"):
         if len(out) >= k or budget_hit or raw_paths >= _RAW_PATH_CAP:
@@ -480,17 +585,21 @@ def place_demands(
         for reused, new_runs in _parse_paths(h, path):
             if len(out) >= k:
                 break
-            # Deduplicate by structural route (reused LP ids + new OMS sequences),
-            # ignoring wavelength slot: same OMS sequence on lam=0 and lam=1 is the
-            # same route option, just a different channel assignment. Collapsing
-            # them keeps the k-best frontier meaningful (diverse routes/groom
-            # combos) instead of filling it with the same plan on every free slot.
             key = (tuple(reused), tuple(oms_seq for oms_seq, _, _, _ in new_runs))
             if key in seen:
-                continue     # a lambda-variant of an already-seen route: does NOT
-                             # advance the budget, so a route with many free slots
-                             # can't starve structurally distinct routes.
+                dedup_hits += 1
+                continue     # a layer-variant of an already-seen route: does NOT
+                             # advance the budget, so a route enumerable on several
+                             # maximal layers can't starve structurally distinct
+                             # routes. With one maximal layer (the common case) this
+                             # never fires; a rising count means the network is
+                             # approaching saturation.
             seen.add(key)
+            slots = _assign_slots(new_runs, spectrum, grid)
+            if slots is None:
+                continue     # no wavelength available: infeasible, not "examined" --
+                             # burning budget here would let a saturated corridor
+                             # starve the frontier of routes that ARE placeable.
             examined += 1
             if examined > _PATH_BUDGET:
                 budget_hit = True
@@ -499,38 +608,35 @@ def place_demands(
             feasible = True
             new_cap = float("inf")
             # S7-10 (fixed): a new run is QoT'd against the committed `spectrum`
-            # snapshot, which never sees a co-located SIBLING new run in this
-            # same placement — those aren't committed either. Under FULL this
-            # is harmless (every non-probe slot is already lit in the probe
-            # comb, sibling or not). Under ACTUAL it was a real, measured
-            # optimism (see the module docstring's Stage 7 assumptions):
-            # `_build_loading` only sees already-occupied slots, so a sibling
-            # run sharing an OMS with this one (the WLIN/WLOUT+EXPRESS node-
-            # split lets that happen — a run can re-enter a physical span an
-            # earlier sibling already used, at a different wavelength) was
-            # invisible to this run's probe, and vice versa. Fixed by adding
-            # each overlapping sibling's own wavelength as an extra neighbor
-            # channel before either is QoT'd — order-independent (every run
-            # sees every co-located sibling that shares an OMS with it,
-            # regardless of loop order), and skipped under FULL, where the
-            # sibling's slot is already included in the dense comb and adding
-            # it again would duplicate a frequency.
-            for idx, (oms_seq, lam, run_src, run_dst) in enumerate(new_runs):
+            # snapshot, which never sees a co-located SIBLING new run in this same
+            # placement — those aren't committed either. Under FULL this is harmless
+            # (every non-probe slot is already lit in the probe comb, sibling or not).
+            # Under ACTUAL it was a real, measured optimism (see the module
+            # docstring's Stage 7 assumptions): `_build_loading` only sees
+            # already-occupied slots, so a sibling run sharing an OMS with this one
+            # was invisible to this run's probe, and vice versa. Fixed by adding
+            # each overlapping sibling's own wavelength as an extra neighbor channel
+            # before either is QoT'd. Since S8-x the sibling slots come from
+            # `_assign_slots` rather than off graph vertices, so this is
+            # order-independent by construction rather than by careful loop
+            # ordering.
+            for idx, (oms_seq, _class_id, run_src, run_dst) in enumerate(new_runs):
+                lam = slots[idx]
                 loading = _build_loading(grid, spectrum, oms_seq, lam, ref_mode,
                                          fill_policy)
                 if fill_policy is not FillPolicy.FULL:
                     oms_set = set(oms_seq)
                     sibling_lams = {
-                        sib_lam
-                        for j, (sib_oms_seq, sib_lam, _, _) in enumerate(new_runs)
+                        slots[j]
+                        for j, (sib_oms_seq, _sib_cls, _, _) in enumerate(new_runs)
                         if j != idx and oms_set.intersection(sib_oms_seq)
                     }
                     if sibling_lams:
                         # Defensive dedup: a sibling's slot could coincide with a
-                        # frequency `_build_loading` already added from the
-                        # committed spectrum (e.g. already occupied on a
-                        # DIFFERENT hop of this run's own multi-hop oms_sequence)
-                        # — avoid emitting two carriers at the same frequency.
+                        # frequency `_build_loading` already added from the committed
+                        # spectrum (e.g. already occupied on a DIFFERENT hop of this
+                        # run's own multi-hop oms_sequence) — avoid emitting two
+                        # carriers at the same frequency.
                         have = {c.center_freq_hz for c in loading.channels}
                         extra = tuple(
                             Channel(grid.freq(sl), grid.spacing_hz, None, ref_mode)
@@ -539,13 +645,15 @@ def place_demands(
                         )
                         if extra:
                             loading = LoadingState(loading.channels + extra)
-                mode, gsnr = _best_feasible_mode(model, qot, oms_seq, loading, ref_mode)
+                mode, gsnr, composed = _best_feasible_mode(
+                    model, qot, oms_seq, loading, ref_mode)
                 if mode is None:
                     feasible = False
                     break
                 realized.append(NewLightpathRun(oms_seq, lam, mode.id, gsnr,
                                                  mode.bitrate_gbps,
-                                                 src_node=run_src, dst_node=run_dst))
+                                                 src_node=run_src, dst_node=run_dst,
+                                                 gsnr_estimated=composed))
                 new_cap = min(new_cap, mode.bitrate_gbps)
             if not feasible:
                 continue
@@ -565,4 +673,12 @@ def place_demands(
                 # Every further route costs two GNPy propagations (forward and
                 # backward, via _best_feasible_mode) and would be discarded.
                 return out
+    if raw_paths >= _RAW_PATH_CAP:
+        _LOG.debug("place_demands %s->%s (%s): raw-path cap %d hit after %d distinct "
+                   "routes; enumeration truncated", src, dst, policy,
+                   _RAW_PATH_CAP, examined)
+    if dedup_hits:
+        _LOG.debug("place_demands %s->%s (%s): %d layer-variant dedup hits — several "
+                   "maximal layers are live, i.e. the network is filling",
+                   src, dst, policy, dedup_hits)
     return out

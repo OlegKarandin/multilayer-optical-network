@@ -124,6 +124,62 @@ def test_build_records_the_parameters_it_was_given(monkeypatch, topo, tmp_path):
     assert params["pair_density"] == 0.02
 
 
+# --- Task A2: --design-margin-db threads into model construction + meta.params ---
+
+def test_design_margin_db_flag_is_set_on_the_model_before_the_build_runs(
+        monkeypatch, topo, tmp_path):
+    """The model handed to build_operating_network must already carry the
+    flag's value -- design_margin_db affects mode feasibility during the
+    build itself, not just what gets recorded afterward."""
+    modes = default_modes()
+    fresh_model = model_from_abstract_graph(TOPOLOGY["graph"], modes=modes)
+    seen = {}
+
+    def fake_build(_model, **_kw):
+        seen["design_margin_db"] = _model.design_margin_db
+        return ScenarioResult(fresh_model, [], _report(), None)
+
+    monkeypatch.setattr(build_cli, "build_operating_network", fake_build)
+    out = tmp_path / "state.json"
+    _run(monkeypatch, topo, out, "--design-margin-db", "1.25")
+    assert seen["design_margin_db"] == 1.25
+
+
+def test_design_margin_db_defaults_to_the_model_default_when_omitted(
+        monkeypatch, topo, tmp_path):
+    from multilayer_optical_network.model.optical_network import DEFAULT_DESIGN_MARGIN_DB
+
+    modes = default_modes()
+    fresh_model = model_from_abstract_graph(TOPOLOGY["graph"], modes=modes)
+    seen = {}
+
+    def fake_build(_model, **_kw):
+        seen["design_margin_db"] = _model.design_margin_db
+        return ScenarioResult(fresh_model, [], _report(), None)
+
+    monkeypatch.setattr(build_cli, "build_operating_network", fake_build)
+    out = tmp_path / "state.json"
+    _run(monkeypatch, topo, out)
+    assert seen["design_margin_db"] == DEFAULT_DESIGN_MARGIN_DB
+
+
+def test_design_margin_db_flag_is_recorded_in_meta_params(monkeypatch, topo, tmp_path):
+    _patch_build(monkeypatch, _report())
+    out = tmp_path / "state.json"
+    _run(monkeypatch, topo, out, "--design-margin-db", "1.25")
+    params = json.loads(out.read_text(encoding="utf-8"))["meta"]["params"]
+    assert params["design_margin_db"] == 1.25
+
+
+def test_design_margin_db_is_none_in_meta_params_when_flag_omitted(
+        monkeypatch, topo, tmp_path):
+    _patch_build(monkeypatch, _report())
+    out = tmp_path / "state.json"
+    _run(monkeypatch, topo, out)
+    params = json.loads(out.read_text(encoding="utf-8"))["meta"]["params"]
+    assert params["design_margin_db"] is None
+
+
 # --- Important #2: --out is validated before the (expensive) build runs ---
 
 def test_out_parent_directory_must_exist_before_the_build_runs(
@@ -307,3 +363,43 @@ def test_cli_wires_a_harvest_cache_into_the_evaluator(monkeypatch, tmp_path):
 
     assert isinstance(seen.get("harvest_cache"), HarvestCache), (
         f"CLI must pass a HarvestCache to make_adapter_evaluator; got {seen!r}")
+
+
+# --- Task A8: the CLI must wire an IncrementCache into the evaluator ---
+
+def test_cli_wires_an_increment_cache_into_the_evaluator(monkeypatch, tmp_path):
+    """Composition (`AdapterEvaluator.compose_gsnr`) is gated on `increment_cache
+    is not None` (allocation.make_adapter_evaluator's docstring). Without one,
+    `_best_feasible_mode` always falls through to exact propagation and the
+    ~3.6x propagation-count reduction tests/model/test_propagation_budget.py
+    measures (69 -> 19 on the frozen german_17 fixture) never reaches
+    production -- exactly the gap this test closes. Safe to wire
+    unconditionally here: model.design_margin_db defaults to 0.5 dB, above
+    composition.COMPOSITION_ERROR_BOUND_DB (0.23 dB), and every composed run
+    is re-verified exactly on accept (objective.verify_and_reseed) regardless
+    of the margin in effect."""
+    from multilayer_optical_network import build_cli
+    from multilayer_optical_network.model.qot_results import IncrementCache
+
+    seen = {}
+    real = build_cli.make_adapter_evaluator
+
+    def _spy(model, store, **kw):
+        seen.update(kw)
+        return real(model, store, **kw)
+
+    monkeypatch.setattr(build_cli, "make_adapter_evaluator", _spy)
+    monkeypatch.setattr(build_cli, "build_operating_network",
+                        lambda *a, **k: (_ for _ in ()).throw(SystemExit(0)))
+
+    out = tmp_path / "state.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        ["multilayer-optical-network-build",
+         "--topology", str(reference_topology("german_17")),
+         "--out", str(out)])
+    with pytest.raises(SystemExit):
+        build_cli.main()
+
+    assert isinstance(seen.get("increment_cache"), IncrementCache), (
+        f"CLI must pass an IncrementCache to make_adapter_evaluator; got {seen!r}")

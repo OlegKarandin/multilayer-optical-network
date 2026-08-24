@@ -73,7 +73,12 @@ def dump_state(model: "NetworkModel", *, fingerprint: str, meta: dict) -> dict:
     id order.
 
     `meta` is provenance only -- nothing in it is fed back into the model on
-    load. `fingerprint` is written into it as `topology_fingerprint`.
+    load, with one exception: `design_margin_db` (written here as
+    `model.design_margin_db`) IS read back, by `load_model_from_state_file`,
+    because every stored `margin_db` is a USABLE margin measured against that
+    value (Task A1's semantic); loading the file into a model with a
+    different design margin would silently reinterpret those numbers.
+    `fingerprint` is written into it as `topology_fingerprint`.
     """
     lightpaths = [
         {"id": lp.id, "oms_sequence": list(lp.oms_sequence), "mode_id": lp.mode_id,
@@ -93,7 +98,8 @@ def dump_state(model: "NetworkModel", *, fingerprint: str, meta: dict) -> dict:
     ]
     return {
         "format_version": FORMAT_VERSION,
-        "meta": {**meta, "topology_fingerprint": fingerprint},
+        "meta": {**meta, "topology_fingerprint": fingerprint,
+                "design_margin_db": model.design_margin_db},
         "lightpaths": lightpaths,
         "ip_links": ip_links,
         "services": services,
@@ -200,6 +206,15 @@ def load_model_from_state_file(
     `recompute_qot_under_loading`, which would run under a different GNPy than
     the one that produced the stored numbers. That is worth a warning, not a
     refusal.
+
+    `meta.design_margin_db` IS fed back into the loaded model (unlike the rest
+    of `meta`, which is provenance only): every stored `margin_db` is a usable
+    margin measured against whatever design margin the build ran at, so the
+    loaded model must carry that same value or its recorded margins are
+    silently misread against the wrong convention. Absent key (a file written
+    before this field existed) reads as 0.0 -- the value every such file was
+    actually built with -- not the current `DEFAULT_DESIGN_MARGIN_DB`, which
+    would retroactively reinterpret margins already on disk.
     """
     from .topology_loader import load_model_from_topology_file
 
@@ -221,5 +236,6 @@ def load_model_from_state_file(
               f"will run under the different GNPy install", file=sys.stderr)
 
     model = load_model_from_topology_file(topology_path, modes=modes)
+    model.design_margin_db = meta.get("design_margin_db", 0.0)
     load_state(model, state)
     return model

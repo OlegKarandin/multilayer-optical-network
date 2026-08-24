@@ -3,7 +3,7 @@
   "meta": {
     "topology_path": "src/multilayer_optical_network/data/german_17.json",
     "gnpy_version": "2.14.0",
-    "built_at": "2026-08-20T18:10:13.172326+00:00",
+    "built_at": "2026-08-24T13:10:15.420083+00:00",
     "params": {
       "seed": 0,
       "target_mean_util": 0.4,
@@ -12,20 +12,22 @@
       "unit_gbps": 100.0,
       "protected_fraction": 0.3,
       "max_iters": 10,
-      "protection_constraints": null
+      "protection_constraints": null,
+      "design_margin_db": null
     },
     "report": {
       "status": "partial",
-      "achieved_mean_util": 0.36944444444444446,
+      "achieved_mean_util": 0.358695652173913,
       "achieved_max_util": 0.875,
       "n_demands": 88,
-      "transponders_used": 90,
+      "transponders_used": 92,
       "unplaced_count": 0,
       "unplaced_reasons": {},
       "scale": 12800.0,
       "limit": "max_util_cap"
     },
-    "topology_fingerprint": "sha256:8567883dc35a724a88e4928dddb922b2a8e6c1d0b4c1765bbc4c5ae973f71c6e"
+    "topology_fingerprint": "sha256:8567883dc35a724a88e4928dddb922b2a8e6c1d0b4c1765bbc4c5ae973f71c6e",
+    "design_margin_db": 0.5
   },
   "lightpaths": [
     {
@@ -38,7 +40,7 @@
       "qot": {
         "gsnr_db": 19.205640024150373,
         "osnr_db": 19.27072359053515,
-        "margin_db": 4.105640024150373,
+        "margin_db": 3.6056400241503734,
         "limiting_element_id": "amp_0_1_0"
       }
     },
@@ -53,7 +55,7 @@
       "qot": {
         "gsnr_db": 17.58531660178167,
         "osnr_db": 17.682068900322733,
-        "margin_db": 2.485316601781671,
+        "margin_db": 1.9853166017816708,
         "limiting_element_id": "amp_1_7_booster"
       }
     },
@@ -67,7 +69,7 @@
       "qot": {
         "gsnr_db": 19.211471834163714,
         "osnr_db": 19.270733151578476,
-        "margin_db": 4.111471834163714,
+        "margin_db": 3.611471834163714,
         "limiting_element_id": "amp_1_0_0"
       }
     },
@@ -81,7 +83,7 @@
       "qot": {
         "gsnr_db": 19.62699446800248,
         "osnr_db": 19.687365390310664,
-        "margin_db": 4.52699446800248,
+        "margin_db": 4.02699446800248,
         "limiting_element_id": "amp_1_6_0"
       }
     },
@@ -95,7 +97,7 @@
       "qot": {
         "gsnr_db": 19.311949212604112,
         "osnr_db": 19.343158655223796,
-        "margin_db": 4.211949212604113,
+        "margin_db": 3.7119492126041127,
         "limiting_element_id": "amp_10_11_0"
       }
     },
@@ -110,7 +112,7 @@
       "qot": {
         "gsnr_db": 17.820593476164152,
         "osnr_db": 17.863722058235048,
-        "margin_db": 2.7205934761641526,
+        "margin_db": 2.2205934761641526,
         "limiting_element_id": "amp_11_12_booster"
       }
     },
@@ -125,7 +127,7 @@
       "qot": {
         "gsnr_db": 16.269150443592906,
         "osnr_db": 16.34682662606093,
-        "margin_db": 1.1691504435929065,
+        "margin_db": 0.6691504435929065,
         "limiting_element_id": "amp_16_13_booster"
       }
     },
@@ -139,24 +141,24 @@
       "qot": {
         "gsnr_db": 18.66802085263498,
         "osnr_db": 18.747703197274227,
-        "margin_db": 3.568020852634982,
+        "margin_db": 3.068020852634982,
         "limiting_element_id": "amp_10_16_0"
       }
     },
     {
       "id": "lp-cand-d0010-0",
       "oms_sequence": [
-        "oms_10_7",
-        "oms_7_3",
+        "oms_10_5",
+        "oms_5_3",
         "oms_3_2"
       ],
       "mode_id": "800G@15.1dB",
       "center_freq_hz": 191400000000000.0,
       "qot": {
-        "gsnr_db": 15.591681006587804,
-        "osnr_db": 15.695947386753332,
-        "margin_db": 0.4916810065878039,
-        "limiting_element_id": "amp_7_3_booster"
+        "gsnr_db": 15.879901473211863,
+        "osnr_db": 15.930686281886938,
+        "margin_db": 0.2799014732118632,
+        "limiting_element_id": "amp_10_5_0"
       }
     },
     {
@@ -166,12 +168,12 @@
         "oms_5_3"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191400000000000.0,
+      "center_freq_hz": 191500000000000.0,
       "qot": {
-        "gsnr_db": 16.70012727267077,
-        "osnr_db": 16.752288790836523,
-        "margin_db": 1.60012727267077,
-        "limiting_element_id": "amp_10_5_0"
+        "gsnr_db": 16.687430951179547,
+        "osnr_db": 16.750616157306098,
+        "margin_db": 1.087430951179547,
+        "limiting_element_id": "amp_5_10_booster"
       }
     },
     {
@@ -180,11 +182,11 @@
         "oms_10_5"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191500000000000.0,
+      "center_freq_hz": 191600000000000.0,
       "qot": {
-        "gsnr_db": 18.228081245722304,
-        "osnr_db": 18.277621424668148,
-        "margin_db": 3.1280812457223046,
+        "gsnr_db": 18.22166825159468,
+        "osnr_db": 18.276206897621012,
+        "margin_db": 2.621668251594679,
         "limiting_element_id": "amp_10_5_0"
       }
     },
@@ -194,11 +196,11 @@
         "oms_10_7"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191600000000000.0,
+      "center_freq_hz": 191400000000000.0,
       "qot": {
-        "gsnr_db": 17.97048410756981,
-        "osnr_db": 18.05248840798456,
-        "margin_db": 2.87048410756981,
+        "gsnr_db": 17.96373770252117,
+        "osnr_db": 18.055330016922014,
+        "margin_db": 2.3637377025211688,
         "limiting_element_id": "amp_10_7_0"
       }
     },
@@ -212,7 +214,7 @@
       "qot": {
         "gsnr_db": 17.173768187937547,
         "osnr_db": 17.251721272056805,
-        "margin_db": 2.0737681879375476,
+        "margin_db": 1.5737681879375476,
         "limiting_element_id": "amp_10_9_0"
       }
     },
@@ -226,7 +228,7 @@
       "qot": {
         "gsnr_db": 19.311949212604112,
         "osnr_db": 19.343158655223796,
-        "margin_db": 4.211949212604113,
+        "margin_db": 3.7119492126041127,
         "limiting_element_id": "amp_11_10_0"
       }
     },
@@ -241,7 +243,7 @@
       "qot": {
         "gsnr_db": 17.820593476164152,
         "osnr_db": 17.86370334406344,
-        "margin_db": 2.7205934761641526,
+        "margin_db": 2.2205934761641526,
         "limiting_element_id": "amp_11_10_booster"
       }
     },
@@ -256,7 +258,7 @@
       "qot": {
         "gsnr_db": 16.269150443592906,
         "osnr_db": 16.34682662606093,
-        "margin_db": 1.1691504435929065,
+        "margin_db": 0.6691504435929065,
         "limiting_element_id": "amp_16_13_booster"
       }
     },
@@ -270,7 +272,7 @@
       "qot": {
         "gsnr_db": 19.277553535238567,
         "osnr_db": 19.308572874295827,
-        "margin_db": 4.177553535238568,
+        "margin_db": 3.6775535352385678,
         "limiting_element_id": "amp_13_14_0"
       }
     },
@@ -284,7 +286,7 @@
       "qot": {
         "gsnr_db": 19.277553535238567,
         "osnr_db": 19.308572874295827,
-        "margin_db": 4.177553535238568,
+        "margin_db": 3.6775535352385678,
         "limiting_element_id": "amp_14_13_0"
       }
     },
@@ -298,7 +300,7 @@
       "qot": {
         "gsnr_db": 18.331228550788442,
         "osnr_db": 18.38170682629314,
-        "margin_db": 3.231228550788442,
+        "margin_db": 2.731228550788442,
         "limiting_element_id": "amp_15_16_0"
       }
     },
@@ -312,7 +314,7 @@
       "qot": {
         "gsnr_db": 18.66802085263498,
         "osnr_db": 18.747703197274227,
-        "margin_db": 3.568020852634982,
+        "margin_db": 3.068020852634982,
         "limiting_element_id": "amp_16_10_0"
       }
     },
@@ -326,7 +328,7 @@
       "qot": {
         "gsnr_db": 18.331228550788442,
         "osnr_db": 18.38170682629314,
-        "margin_db": 3.231228550788442,
+        "margin_db": 2.731228550788442,
         "limiting_element_id": "amp_16_15_0"
       }
     },
@@ -342,7 +344,7 @@
       "qot": {
         "gsnr_db": 15.879901473211863,
         "osnr_db": 15.93089558128285,
-        "margin_db": 0.7799014732118632,
+        "margin_db": 0.2799014732118632,
         "limiting_element_id": "amp_3_5_booster"
       }
     },
@@ -356,7 +358,7 @@
       "qot": {
         "gsnr_db": 19.966828345584332,
         "osnr_db": 19.976057826108928,
-        "margin_db": 4.866828345584333,
+        "margin_db": 4.366828345584333,
         "limiting_element_id": "amp_2_3_0"
       }
     },
@@ -368,9 +370,9 @@
       "mode_id": "800G@15.1dB",
       "center_freq_hz": 191400000000000.0,
       "qot": {
-        "gsnr_db": 19.970232370994225,
-        "osnr_db": 19.977036234539092,
-        "margin_db": 4.870232370994225,
+        "gsnr_db": 19.97097909017517,
+        "osnr_db": 19.97703652771581,
+        "margin_db": 4.370979090175171,
         "limiting_element_id": "amp_2_4_0"
       }
     },
@@ -381,12 +383,26 @@
         "oms_7_10"
       ],
       "mode_id": "800G@15.1dB",
+      "center_freq_hz": 191400000000000.0,
+      "qot": {
+        "gsnr_db": 16.36179547337344,
+        "osnr_db": 16.47173182342814,
+        "margin_db": 0.7617954733734411,
+        "limiting_element_id": "amp_7_3_booster"
+      }
+    },
+    {
+      "id": "lp-cand-d0043-0",
+      "oms_sequence": [
+        "oms_3_2"
+      ],
+      "mode_id": "800G@15.1dB",
       "center_freq_hz": 191500000000000.0,
       "qot": {
-        "gsnr_db": 16.371895513444194,
-        "osnr_db": 16.470093354583504,
-        "margin_db": 1.2718955134441945,
-        "limiting_element_id": "amp_7_10_booster"
+        "gsnr_db": 19.96842155833568,
+        "osnr_db": 19.976058452249813,
+        "margin_db": 4.368421558335681,
+        "limiting_element_id": "amp_3_2_0"
       }
     },
     {
@@ -399,7 +415,7 @@
       "qot": {
         "gsnr_db": 19.96955926702848,
         "osnr_db": 19.97703597022198,
-        "margin_db": 4.86955926702848,
+        "margin_db": 4.36955926702848,
         "limiting_element_id": "amp_4_2_0"
       }
     },
@@ -409,11 +425,11 @@
         "oms_5_10"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191600000000000.0,
+      "center_freq_hz": 191500000000000.0,
       "qot": {
-        "gsnr_db": 18.23201675802909,
-        "osnr_db": 18.2762473761029,
-        "margin_db": 3.1320167580290903,
+        "gsnr_db": 18.228081245722304,
+        "osnr_db": 18.277621424668148,
+        "margin_db": 2.6280812457223046,
         "limiting_element_id": "amp_5_10_0"
       }
     },
@@ -427,7 +443,7 @@
       "qot": {
         "gsnr_db": 19.62699446800248,
         "osnr_db": 19.687365390310664,
-        "margin_db": 4.52699446800248,
+        "margin_db": 4.02699446800248,
         "limiting_element_id": "amp_6_1_0"
       }
     },
@@ -442,7 +458,7 @@
       "qot": {
         "gsnr_db": 17.601941588854345,
         "osnr_db": 17.682135635362982,
-        "margin_db": 2.5019415888543453,
+        "margin_db": 2.0019415888543453,
         "limiting_element_id": "amp_1_7_booster"
       }
     },
@@ -452,11 +468,11 @@
         "oms_7_10"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191700000000000.0,
+      "center_freq_hz": 191500000000000.0,
       "qot": {
-        "gsnr_db": 17.96885751481557,
-        "osnr_db": 18.051049443658297,
-        "margin_db": 2.8688575148155717,
+        "gsnr_db": 17.962088129315514,
+        "osnr_db": 18.053889996575265,
+        "margin_db": 2.3620881293155147,
         "limiting_element_id": "amp_7_10_0"
       }
     },
@@ -470,7 +486,7 @@
       "qot": {
         "gsnr_db": 18.28089514559553,
         "osnr_db": 18.37814525689127,
-        "margin_db": 3.18089514559553,
+        "margin_db": 2.68089514559553,
         "limiting_element_id": "amp_7_8_0"
       }
     },
@@ -484,7 +500,7 @@
       "qot": {
         "gsnr_db": 18.28089514559553,
         "osnr_db": 18.37814525689127,
-        "margin_db": 3.18089514559553,
+        "margin_db": 2.68089514559553,
         "limiting_element_id": "amp_8_7_0"
       }
     },
@@ -498,7 +514,7 @@
       "qot": {
         "gsnr_db": 17.173768187937547,
         "osnr_db": 17.251721272056805,
-        "margin_db": 2.0737681879375476,
+        "margin_db": 1.5737681879375476,
         "limiting_element_id": "amp_9_10_0"
       }
     },
@@ -513,7 +529,7 @@
       "qot": {
         "gsnr_db": 17.45462443385247,
         "osnr_db": 17.532146200736626,
-        "margin_db": 2.35462443385247,
+        "margin_db": 1.8546244338524698,
         "limiting_element_id": "amp_6_7_booster"
       }
     },
@@ -525,12 +541,12 @@
         "oms_5_3"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191500000000000.0,
+      "center_freq_hz": 191600000000000.0,
       "qot": {
-        "gsnr_db": 16.814368953058974,
-        "osnr_db": 16.84694940756254,
-        "margin_db": 1.7143689530589743,
-        "limiting_element_id": "amp_4_5_booster"
+        "gsnr_db": 16.81561593918672,
+        "osnr_db": 16.8451945673184,
+        "margin_db": 1.215615939186721,
+        "limiting_element_id": "amp_5_4_booster"
       }
     },
     {
@@ -543,9 +559,9 @@
       "mode_id": "800G@15.1dB",
       "center_freq_hz": 191500000000000.0,
       "qot": {
-        "gsnr_db": 16.81170037183556,
-        "osnr_db": 16.846796234757786,
-        "margin_db": 1.7117003718355601,
+        "gsnr_db": 16.814368953058974,
+        "osnr_db": 16.84681837125577,
+        "margin_db": 1.2143689530589743,
         "limiting_element_id": "amp_5_4_booster"
       }
     },
@@ -559,7 +575,7 @@
       "qot": {
         "gsnr_db": 19.19919932828804,
         "osnr_db": 19.23298248952537,
-        "margin_db": 4.099199328288039,
+        "margin_db": 3.599199328288039,
         "limiting_element_id": "amp_3_5_0"
       }
     },
@@ -575,7 +591,7 @@
       "qot": {
         "gsnr_db": 15.90517266698313,
         "osnr_db": 16.026940879549137,
-        "margin_db": 0.8051726669831307,
+        "margin_db": 0.3051726669831307,
         "limiting_element_id": "amp_0_1_booster"
       }
     },
@@ -585,11 +601,11 @@
         "oms_4_5"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191600000000000.0,
+      "center_freq_hz": 191400000000000.0,
       "qot": {
-        "gsnr_db": 19.963176232143244,
-        "osnr_db": 19.975079538384854,
-        "margin_db": 4.863176232143244,
+        "gsnr_db": 19.96648760658898,
+        "osnr_db": 19.97703476351032,
+        "margin_db": 4.366487606588981,
         "limiting_element_id": "amp_4_5_0"
       }
     },
@@ -603,10 +619,10 @@
       "mode_id": "800G@15.1dB",
       "center_freq_hz": 191600000000000.0,
       "qot": {
-        "gsnr_db": 17.243195885670453,
-        "osnr_db": 17.261724559195407,
-        "margin_db": 2.143195885670453,
-        "limiting_element_id": "amp_4_2_booster"
+        "gsnr_db": 17.246164519437365,
+        "osnr_db": 17.261762405518176,
+        "margin_db": 1.6461645194373649,
+        "limiting_element_id": "amp_2_4_booster"
       }
     },
     {
@@ -615,11 +631,11 @@
         "oms_5_4"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191700000000000.0,
+      "center_freq_hz": 191400000000000.0,
       "qot": {
-        "gsnr_db": 19.960990867389064,
-        "osnr_db": 19.9741020464348,
-        "margin_db": 4.860990867389065,
+        "gsnr_db": 19.964016967454793,
+        "osnr_db": 19.977033792292545,
+        "margin_db": 4.364016967454793,
         "limiting_element_id": "amp_5_4_0"
       }
     },
@@ -634,7 +650,7 @@
       "qot": {
         "gsnr_db": 17.45462443385247,
         "osnr_db": 17.5321954305109,
-        "margin_db": 2.35462443385247,
+        "margin_db": 1.8546244338524698,
         "limiting_element_id": "amp_6_1_booster"
       }
     },
@@ -644,11 +660,11 @@
         "oms_7_3"
       ],
       "mode_id": "800G@15.1dB",
-      "center_freq_hz": 191500000000000.0,
+      "center_freq_hz": 191400000000000.0,
       "qot": {
-        "gsnr_db": 18.93368085268441,
-        "osnr_db": 19.016798011039224,
-        "margin_db": 3.8336808526844113,
+        "gsnr_db": 18.93510824511101,
+        "osnr_db": 19.01803171282442,
+        "margin_db": 3.3351082451110106,
         "limiting_element_id": "amp_7_3_0"
       }
     },
@@ -662,7 +678,7 @@
       "qot": {
         "gsnr_db": 17.92820054982739,
         "osnr_db": 17.997134004810967,
-        "margin_db": 2.8282005498273914,
+        "margin_db": 2.3282005498273914,
         "limiting_element_id": "amp_7_9_0"
       }
     },
@@ -676,7 +692,7 @@
       "qot": {
         "gsnr_db": 17.92820054982739,
         "osnr_db": 17.997134004810967,
-        "margin_db": 2.8282005498273914,
+        "margin_db": 2.3282005498273914,
         "limiting_element_id": "amp_9_7_0"
       }
     }
@@ -843,6 +859,12 @@
       "a_router": "router_3",
       "z_router": "router_10",
       "lightpath_id": "lp-cand-d0042-0"
+    },
+    {
+      "id": "ipl-cand-d0043-0",
+      "a_router": "router_3",
+      "z_router": "router_2",
+      "lightpath_id": "lp-cand-d0043-0"
     },
     {
       "id": "ipl-prot-d0043-0",
@@ -1417,8 +1439,7 @@
       "dst_router": "router_2",
       "demand_gbps": 100.0,
       "working_path": [
-        "ipl-cand-d0042-0",
-        "ipl-cand-d0010-0"
+        "ipl-cand-d0043-0"
       ],
       "protection_path": [
         "ipl-prot-d0043-0"
@@ -1430,11 +1451,10 @@
       "dst_router": "router_2",
       "demand_gbps": 100.0,
       "working_path": [
-        "ipl-prot-d0043-0"
+        "ipl-cand-d0043-0"
       ],
       "protection_path": [
-        "ipl-cand-d0042-0",
-        "ipl-cand-d0010-0"
+        "ipl-prot-d0043-0"
       ]
     },
     {
@@ -1443,11 +1463,10 @@
       "dst_router": "router_2",
       "demand_gbps": 100.0,
       "working_path": [
-        "ipl-prot-d0043-0"
+        "ipl-cand-d0043-0"
       ],
       "protection_path": [
-        "ipl-cand-d0042-0",
-        "ipl-cand-d0010-0"
+        "ipl-prot-d0043-0"
       ]
     },
     {
@@ -1456,11 +1475,10 @@
       "dst_router": "router_2",
       "demand_gbps": 100.0,
       "working_path": [
-        "ipl-prot-d0043-0"
+        "ipl-cand-d0043-0"
       ],
       "protection_path": [
-        "ipl-cand-d0042-0",
-        "ipl-cand-d0010-0"
+        "ipl-prot-d0043-0"
       ]
     },
     {
@@ -1469,7 +1487,7 @@
       "dst_router": "router_4",
       "demand_gbps": 100.0,
       "working_path": [
-        "ipl-prot-d0043-0",
+        "ipl-cand-d0043-0",
         "ipl-cand-d0039-0"
       ],
       "protection_path": []
