@@ -11,6 +11,7 @@ from multilayer_optical_network.model.multilayer_graph import (
     build_layered_graph, ACCESS, WLIN, WLOUT, lpe_edges, wle_count_on_layer, place_demands,
 )
 from multilayer_optical_network.model.topology_import import model_from_abstract_graph
+from multilayer_optical_network.model import multilayer_graph as mg
 
 
 class _ConstQot:
@@ -288,43 +289,115 @@ def test_wle_count_counts_parallel_oms_per_layer():
     assert wle_count_on_layer(g, "oms-AB-2", 0) == 1
 
 
+def _f(slot: int) -> float:
+    """Center frequency of a default-grid slot."""
+    return SpectrumGrid.default().freq(slot)
+
+
+def _line4_model() -> NetworkModel:
+    """Importer-built A-B-C-D line, one directed OMS per hop in each direction.
+    Used for the incomparable-signatures case (spec §3.1's counter-example)."""
+    graph = {
+        "nodes": [{"id": n} for n in ("A", "B", "C", "D")],
+        "edges": [
+            {"src": "A", "dst": "B", "length_km": 80.0},
+            {"src": "B", "dst": "C", "length_km": 80.0},
+            {"src": "C", "dst": "D", "length_km": 80.0},
+        ],
+    }
+    return model_from_abstract_graph(graph, modes=ModeRegistry([
+        TransceiverMode(id="100G", bitrate_gbps=100.0, required_gsnr_db=12.0,
+                        symbol_rate_baud=32e9, channel_spacing_hz=100e9)]))
+
+
 # ---------------------------------------------------------------------------
-# Node-split + wavelength-layer cap. Each optical node has a WLin/WLout port pair
-# per layer joined by an EXPRESS edge, so a segmented placement terminates at
-# (WLin,n,lam) and re-originates at (WLout,n,lam) — distinct vertices — and can
-# ride ONE wavelength (a single reused (WL,n,lam) vertex forbade that: a simple
-# path can't revisit it). That removes the spurious wavelength coupling, so the
-# layer loop caps at the FIRST globally-free slot (one layer suffices), killing
-# the lambda-variant explosion that dominated Yen's path enumeration.
+# Node-split + dominance-maximal wavelength layers. Each optical node has a
+# WLin/WLout port pair per LAYER joined by an EXPRESS edge, so a segmented
+# placement terminates at (WLin,n,c) and re-originates at (WLout,n,c) — distinct
+# vertices — and can ride ONE wavelength. A layer is built per ⊆-MAXIMAL free-slot
+# signature, not per slot: if every OMS free on slot A is also free on slot B, every
+# route liftable onto layer A lifts onto layer B at identical cost (all WLE weigh
+# _W_WLE), so layer A contributes nothing and is dropped.
 # ---------------------------------------------------------------------------
 
-def _wle_lams(g):
-    return sorted({d["lam"] for _, _, d in g.edges(data=True) if d.get("kind") == "WLE"})
+def _wle_classes(g):
+    return sorted({d["class_id"] for _, _, d in g.edges(data=True)
+                   if d.get("kind") == "WLE"})
 
 
-def test_wle_layers_capped_at_first_globally_free_slot():
-    """Empty network: slot 0 is free on every OMS, so only layer 0 is built — not
-    one layer per grid slot. One free layer is enough now that segmented
-    placements share a single wavelength (see the segmented test)."""
+def _class_sigs(g):
+    return {c.oms_ids for c in g.graph["slot_classes"]}
+
+
+def test_empty_network_builds_exactly_one_layer():
+    """Every slot is free on every OMS, so all signatures are equal AND maximal:
+    one class, one layer."""
     n = _two_parallel_oms_model()
     g = build_layered_graph(n)
-    assert _wle_lams(g) == [0]
+    assert _wle_classes(g) == [0]
+    (cls,) = g.graph["slot_classes"]
+    assert cls.oms_ids == {"oms-AB-1", "oms-AB-2"}
+    assert len(cls.slots) == SpectrumGrid.default().num_slots
 
 
-def test_wle_cap_keeps_lower_slots_where_free_on_other_oms():
-    """Slot 0 occupied on oms-AB-1 only -> slot 0 is not globally free; the first
-    globally-free slot is 1. The cap builds layers 0..1: slot 0 stays on the
-    unoccupied oms-AB-2 (a route over it can still use it), slot 1 is on both
-    (globally free), and nothing above 1 is built."""
+def test_dominated_signature_is_dropped():
+    """Slot 0 lit on oms-AB-1 -> signature(0)={oms-AB-2}; every other slot is free on
+    both -> signature={oms-AB-1,oms-AB-2}. {oms-AB-2} is a strict subset, so slot 0's
+    class is DOMINATED and dropped: 2 candidate classes -> 1 layer. (The old cap
+    heuristic built both.) The low slot is not lost — it is handed out at assignment
+    time by first_fit_slot; see test_assignment_uses_a_dominated_low_slot."""
     n = _two_parallel_oms_model()
     n.add_lightpath(_L("lp0", ("oms-AB-1",), "100G", 191.4e12))     # slot 0
     n.set_qot_state("lp0", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
     g = build_layered_graph(n)
-    assert _wle_lams(g) == [0, 1]
-    assert wle_count_on_layer(g, "oms-AB-1", 0) == 0     # occupied
-    assert wle_count_on_layer(g, "oms-AB-2", 0) == 1     # free, retained
-    assert wle_count_on_layer(g, "oms-AB-1", 1) == 1     # globally-free slot
-    assert wle_count_on_layer(g, "oms-AB-2", 1) == 1
+    assert _wle_classes(g) == [0]
+    assert _class_sigs(g) == {frozenset({"oms-AB-1", "oms-AB-2"})}
+    assert wle_count_on_layer(g, "oms-AB-1", 0) == 1
+    assert wle_count_on_layer(g, "oms-AB-2", 0) == 1
+
+
+def test_incomparable_signatures_are_all_kept():
+    """The rule refuses to over-merge. Three OMS, no universally-free slot:
+    signatures {BC,CD}, {AB,BC}, {AB,CD} are pairwise incomparable, so all three
+    layers survive — A->C exists only on the second, B->D only on the first."""
+    n = _line4_model()
+    # slot 0 lit on AB, slot 1 lit on CD, slot 2 lit on BC; slots >=3 lit everywhere
+    n.add_lightpath(_L("l0", ("oms_A_B",), "100G", _f(0)))
+    n.add_lightpath(_L("l1", ("oms_C_D",), "100G", _f(1)))
+    n.add_lightpath(_L("l2", ("oms_B_C",), "100G", _f(2)))
+    for lp in ("l0", "l1", "l2"):
+        n.set_qot_state(lp, QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
+    for s in range(3, SpectrumGrid.default().num_slots):
+        n.add_lightpath(_L(f"lx{s}", ("oms_A_B", "oms_B_C", "oms_C_D"), "100G", _f(s)))
+        n.set_qot_state(f"lx{s}", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
+    g = build_layered_graph(n)
+    assert _class_sigs(g) == {
+        frozenset({"oms_B_A", "oms_B_C", "oms_C_B", "oms_C_D", "oms_D_C"}),
+        frozenset({"oms_A_B", "oms_B_A", "oms_C_B", "oms_C_D", "oms_D_C"}),
+        frozenset({"oms_A_B", "oms_B_A", "oms_B_C", "oms_C_B", "oms_D_C"}),
+    }
+
+
+def test_forbidding_an_oms_changes_which_signatures_are_maximal():
+    """Signatures are over NON-FORBIDDEN OMS. Forbid oms-AB-1 and slot 0's signature
+    becomes {oms-AB-2} — now equal to every other slot's, hence maximal again and
+    merged into one class rather than dropped."""
+    n = _two_parallel_oms_model()
+    n.add_lightpath(_L("lp0", ("oms-AB-1",), "100G", 191.4e12))     # slot 0
+    n.set_qot_state("lp0", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
+    g = build_layered_graph(n, forbidden_assets=frozenset({"oms-AB-1"}))
+    assert _class_sigs(g) == {frozenset({"oms-AB-2"})}
+    (cls,) = g.graph["slot_classes"]
+    assert 0 in cls.slots            # the low slot is inside the surviving class
+
+
+def test_fully_lit_oms_contributes_no_layer():
+    """A slot free on NO non-forbidden OMS has an empty signature and is discarded
+    before maximality is tested — an empty class would add vertices and no routes."""
+    n = _one_lightpath_model()      # single oms-AB, slot 20 lit
+    g = build_layered_graph(n)
+    assert _class_sigs(g) == {frozenset({"oms-AB"})}
+    assert all(20 not in c.slots for c in g.graph["slot_classes"])
 
 
 def test_pass_through_node_has_express_edge():
@@ -353,15 +426,14 @@ def test_through_lightpath_is_single_run_across_two_oms():
 
 
 def test_segmented_two_run_placement_shares_one_wavelength():
-    """The node-split's payoff: a demand served by TWO separate lightpaths meeting
-    at a regen node (A->C then C->B) is now enumerable on a SINGLE wavelength. The
-    terminate routes through (WLin,C,0) and the re-originate through (WLout,C,0) —
-    distinct vertices — so the two runs need not take different slots. On a pristine
-    graph (only layer 0 built) the segmented placement still forms, both runs lam 0."""
+    """The node-split's payoff: a demand served by TWO separate lightpaths meeting at
+    a regen node (A->C then C->B) is enumerable on a SINGLE wavelength. The two runs
+    are OMS-disjoint, so accept-time assignment gives them the SAME slot 0 (they do
+    not contend); only runs sharing an OMS are forced apart."""
     grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=80)
     n = _cheap_route_plus_distinct_route()
     g = build_layered_graph(n, grid=grid)
-    assert _wle_lams(g) == [0]                          # only one layer on empty
+    assert _wle_classes(g) == [0]                       # one layer on empty
     res = place_demands(n, g, FakeQot(15.0), src="A", dst="B",
                         demand_gbps=100.0, policy="new_only", grid=grid)
     two_run = [p for p in res if len(p.new_lightpaths) == 2]
@@ -369,10 +441,9 @@ def test_segmented_two_run_placement_shares_one_wavelength():
     assert {r.lam for r in two_run[0].new_lightpaths} == {0}
 
 
-def test_demand_still_placeable_under_cap():
-    """Completeness: with slot 0 occupied on one A->B fiber, an A->B demand still
-    places on both fibers — the parallel fiber at slot 0, and oms-AB-1 at the
-    first-free slot 1. The cap must not lose either route."""
+def test_demand_still_placeable_after_merging():
+    """Completeness: with slot 0 lit on one A->B fiber, an A->B demand still places on
+    BOTH fibers even though slot 0's layer was dropped as dominated."""
     n = _two_parallel_oms_model()
     n.add_lightpath(_L("lp0", ("oms-AB-1",), "100G", 191.4e12))     # slot 0
     n.set_qot_state("lp0", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
@@ -381,6 +452,22 @@ def test_demand_still_placeable_under_cap():
                         demand_gbps=100.0, policy="new_only")
     routes = {p.new_lightpaths[0].oms_sequence for p in res if p.new_lightpaths}
     assert ("oms-AB-1",) in routes and ("oms-AB-2",) in routes, routes
+
+
+def test_assignment_uses_a_dominated_low_slot():
+    """Slot 0's layer is dropped, but a route over oms-AB-2 (where slot 0 IS free)
+    must still be ASSIGNED slot 0 — dominance removes enumeration duplicates, it must
+    not cost spectrum."""
+    n = _two_parallel_oms_model()
+    n.add_lightpath(_L("lp0", ("oms-AB-1",), "100G", 191.4e12))     # slot 0
+    n.set_qot_state("lp0", QoTState(gsnr_db=15.0, osnr_db=30.0, margin_db=3.0))
+    g = build_layered_graph(n)
+    res = place_demands(n, g, FakeQot(15.0), src="A", dst="B",
+                        demand_gbps=100.0, policy="new_only")
+    by_route = {p.new_lightpaths[0].oms_sequence: p.new_lightpaths[0].lam
+                for p in res if p.new_lightpaths}
+    assert by_route[("oms-AB-2",)] == 0     # lowest free slot on that fiber
+    assert by_route[("oms-AB-1",)] == 1     # slot 0 is lit there
 
 
 # ---------------------------------------------------------------------------
@@ -512,3 +599,83 @@ def test_min_residual_defaults_to_todays_behaviour():
     n.add_service(Service("s-load", "R1", "R2", 70.0, working_path=("ip-AB",)))
     g = build_layered_graph(n)
     assert [d["lightpath_id"] for _, _, d in lpe_edges(g)] == ["lp-AB"]
+
+
+# ---------------------------------------------------------------------------
+# B2: accept-time slot assignment
+# ---------------------------------------------------------------------------
+
+def _shared_oms_two_run_model() -> NetworkModel:
+    """A-B-C-D line where a two-run placement (A->C then C->D) and a single-run
+    placement (A->D) both exist, and the two runs of a segmented A->B / B->D placement
+    share oms-BC. Built through the importer so both directed OMS exist per hop."""
+    graph = {
+        "nodes": [{"id": n} for n in ("A", "B", "C", "D")],
+        "edges": [
+            {"src": "A", "dst": "B", "length_km": 80.0},
+            {"src": "B", "dst": "C", "length_km": 80.0},
+            {"src": "C", "dst": "D", "length_km": 80.0},
+        ],
+    }
+    return model_from_abstract_graph(graph, modes=ModeRegistry([
+        TransceiverMode(id="100G", bitrate_gbps=100.0, required_gsnr_db=12.0,
+                        symbol_rate_baud=32e9, channel_spacing_hz=100e9)]))
+
+
+def test_sibling_runs_sharing_an_oms_get_distinct_slots():
+    """Two runs in ONE placement can legitimately share a physical OMS (the
+    WLin/WLout split lets a later run re-enter a span an earlier one used). They are
+    different lightpaths, so they must NOT be assigned the same slot on that span —
+    accept-time assignment threads a placement-local extra_state to force them apart."""
+    grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=80)
+    n = _shared_oms_two_run_model()
+    g = build_layered_graph(n, grid=grid)
+    res = place_demands(n, g, FakeQot(15.0), src="A", dst="D",
+                        demand_gbps=100.0, policy="new_only", grid=grid)
+    two_run = [p for p in res if len(p.new_lightpaths) == 2]
+    assert two_run, "expected a two-run placement sharing an OMS"
+    for p in two_run:
+        a, b = p.new_lightpaths
+        if set(a.oms_sequence) & set(b.oms_sequence):
+            assert a.lam != b.lam, (a.oms_sequence, b.oms_sequence, a.lam)
+
+
+def test_no_returned_placement_double_books_a_slot_on_one_oms():
+    """Whatever comes back must be internally conflict-free: no two runs of one
+    placement may hold the same slot on a shared OMS."""
+    grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=4)
+    n = _shared_oms_two_run_model()
+    g = build_layered_graph(n, grid=grid)
+    res = place_demands(n, g, FakeQot(15.0), src="A", dst="D",
+                        demand_gbps=100.0, policy="new_only", grid=grid)
+    assert res
+    for p in res:
+        booked = set()
+        for r in p.new_lightpaths:
+            for oms_id in r.oms_sequence:
+                assert (oms_id, r.lam) not in booked, (p, oms_id, r.lam)
+                booked.add((oms_id, r.lam))
+
+
+def test_placement_rejected_for_want_of_a_slot_does_not_consume_budget(monkeypatch):
+    """A route with no assignable slot is infeasible, not 'examined'. If it burned a
+    _PATH_BUDGET slot, a saturated corridor could starve the frontier of the
+    structurally distinct routes that ARE placeable.
+
+    Forced by shrinking the grid to ONE slot: any two-run placement sharing an OMS then
+    has no second slot and must be rejected -- while the single-run route still comes
+    back, proving the frontier was not starved. `_PATH_BUDGET` is patched down to 2 so
+    the starvation would be visible if rejections consumed it."""
+    monkeypatch.setattr(mg, "_PATH_BUDGET", 2)
+    grid = SpectrumGrid(anchor_hz=191.4e12, spacing_hz=100e9, num_slots=1)
+    n = _shared_oms_two_run_model()
+    g = build_layered_graph(n, grid=grid)
+    res = place_demands(n, g, FakeQot(15.0), src="A", dst="D",
+                        demand_gbps=100.0, policy="new_only", grid=grid)
+    assert any(len(p.new_lightpaths) == 1 for p in res), res
+    for p in res:
+        booked = set()
+        for r in p.new_lightpaths:
+            for oms_id in r.oms_sequence:
+                assert (oms_id, r.lam) not in booked
+                booked.add((oms_id, r.lam))
